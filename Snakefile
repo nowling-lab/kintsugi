@@ -18,7 +18,7 @@ rule index_bam:
     output:
         "data/input_alignments/{sample}.bai"
     threads:
-        6
+        4
     shell:
         "samtools index -@{threads} {input} {output}"
         
@@ -32,7 +32,7 @@ rule filter_bam:
     output:
         "data/filtered_alignments/{sample}.filtered.bam"
     threads:
-        6
+        4
     shell:
         "samtools view -b -@{threads} -F 0x0200 -F 0x0100 -F 0x004 -q {params.min_mapping_qual} {input.bam} {params.chrom} > {output}"
 
@@ -91,13 +91,67 @@ rule merge_kmer_counts:
         sorted_kmers=expand("data/doc_freq/{sample}.sorted.counts",
                             sample=config["samples"])
     output:
-        kmers_doc_freq="data/doc_freq/all_kmers.doc_freq"
+        kmer_doc_freqs="data/doc_freq/all_kmers.doc_freq"
     params:
         batch_size=config["merge_batch_size"]
     threads:
         24
     shell:
-        "sort --batch-size {params.batch_size} --parallel {threads} -S 96G -m {input.sorted_kmers} | uniq -c > {output.kmers_doc_freq}"
+        "sort --batch-size {params.batch_size} --parallel {threads} -S 96G -m {input.sorted_kmers} | uniq -c > {output.kmer_doc_freqs}"
+
+rule create_pass_list:
+    input:
+        kmer_doc_freqs="data/doc_freq/all_kmers.doc_freq"
+    params:
+        min_df=config["min_doc_freq"]
+    output:
+        pass_list="data/doc_freq/kmer_passlist.bf"
+    threads:
+        4
+    shell:
+        "scripts/create_bloomfilter.py --kmer-doc-freqs {input.kmer_doc_freqs} --output-bf {output.pass_list} --min-df {params.min_df}"
+
+# feature extraction
+
+rule create_random_projection:
+    params:
+        n_features=config["n_features"],
+        n_rand_dim=config["n_rand_dim"],
+        n_samples=len(config["samples"])
+    output:
+        rand_proj="data/feature_extraction/rand_proj.joblib"
+    threads:
+        4
+    shell:
+        "scripts/create_rand_proj.py --n-features {params.n_features} --n-components {params.n_rand_dim} --n-samples {params.n_samples} --output-fl {output.rand_proj}"
+
+rule extract_features:
+    input:
+        kmer_counts="data/kmer_counts/{sample}.counts",
+        rand_proj="data/feature_extraction/rand_proj.joblib",
+        pass_list="data/doc_freq/kmer_passlist.bf"
+    params:
+        n_features=config["n_features"],
+        use_binary=config["use_binary_features"]
+    output:
+        feature_matrix="data/feature_extraction/{sample}.features"
+    threads:
+        3
+    shell:
+        "scripts/feature_extractor.py --rand-proj-fl {input.rand_proj} --passlist-bf {input.pass_list} --kmer-freq-fl {input.kmer_counts} --n-features {params.n_features} {params.use_binary} --feature-matrix {output.feature_matrix}"
+
+rule pca:
+    input:
+        feature_matrices=expand("data/feature_extraction/{sample}.features",
+                                sample=config["samples"])
+    params:
+        sample_names=" ".join(config["samples"])
+    output:
+        plot="data/pca/pca_1_2.png"
+    threads:
+        4
+    shell:
+        "scripts/pca.py --feature-matrices {input.feature_matrices} --sample-names {params.sample_names} --plot-fl {output.plot}"
         
 # top-level rules
 rule setup_inputs:
