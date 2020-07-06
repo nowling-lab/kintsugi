@@ -1,0 +1,17 @@
+# inputs
+input_bam_dir: /scratch1/rnowling/datasets/pop-gen/1000-anopheles/bams
+
+# we need to trim reads differently depending on sequencing tech
+samples: [AB0129_C, AB0133_C, AB0147_C, AB0153_C, AB0174_C, AB0177_C, AB0203_C]
+
+# alignment filtering settings
+chrom: "2L"
+min_mapping_quality: "10"
+
+# kmer-counting
+kmer_size: 21
+
+# doc freq
+merge_batch_size: 24
+
+
