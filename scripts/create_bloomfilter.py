@@ -1,15 +1,12 @@
 #!/usr/bin/env python
 
 import argparse
+import sys
 
 from pybloom import BloomFilter
 
 def parse_args():
     parser = argparse.ArgumentParser()
-
-    parser.add_argument("--kmer-doc-freqs",
-                        type=str,
-                        required=True)
 
     parser.add_argument("--output-bf",
                         type=str,
@@ -34,11 +31,10 @@ if __name__ == "__main__":
 
     progress = 1
     passlist = BloomFilter(capacity = args.max_elements, error_rate = args.max_error)
-    with open(args.kmer_doc_freqs) as fl:
-        for i, ln in enumerate(fl):
-            cols = ln.strip().split()
-            if int(cols[0]) >= args.min_df:
-                passlist.add(cols[1])
+    for ln in sys.stdin:
+        cols = ln.strip().split()
+        if int(cols[0]) >= args.min_df:
+            passlist.add(cols[1])
 
     with open(args.output_bf, "w") as fl:
         passlist.tofile(fl)

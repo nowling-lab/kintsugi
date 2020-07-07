@@ -79,30 +79,19 @@ rule sort_kmers:
 # multiple threads but using all threads
 # lets us prevent other processes from running
 # so that we can use all memory as buffer
-rule merge_kmer_counts:
+rule create_pass_list:
     input:
         sorted_kmers=expand("data/doc_freq/{sample}.sorted.counts",
                             sample=config["samples"])
-    output:
-        kmer_doc_freqs="data/doc_freq/all_kmers.doc_freq"
     params:
-        batch_size=config["merge_batch_size"]
-    threads:
-        24
-    shell:
-        "sort --batch-size {params.batch_size} -S 110G -T data/doc_freq/ -m {input.sorted_kmers} | uniq -c > {output.kmer_doc_freqs}"
-
-rule create_pass_list:
-    input:
-        kmer_doc_freqs="data/doc_freq/all_kmers.doc_freq"
-    params:
+        batch_size=config["merge_batch_size"],
         min_df=config["min_doc_freq"]
     output:
         pass_list="data/doc_freq/kmer_passlist.bf"
     threads:
-        4
+        24
     shell:
-        "scripts/create_bloomfilter.py --kmer-doc-freqs {input.kmer_doc_freqs} --output-bf {output.pass_list} --min-df {params.min_df}"
+        "sort --batch-size {params.batch_size} -S 110G -T data/doc_freq/ -m {input.sorted_kmers} | uniq -c | scripts/create_bloomfilter.py --min-df {params.min_df} --output-bf {output.pass_list}"
 
 # feature extraction
 rule create_random_projection:
