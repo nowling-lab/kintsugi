@@ -28,7 +28,7 @@ min_mapping_quality: "10"
 kmer_size: 21
 
 # doc freq
-merge_batch_size: 24
+merge_batch_size: 512
 min_doc_freq: 2
 
 # feature extraction

@@ -36,21 +36,10 @@ rule filter_bam:
     shell:
         "samtools view -b -@{threads} -F 0x0200 -F 0x0100 -F 0x004 -q {params.min_mapping_qual} {input.bam} {params.chrom} > {output}"
 
-# get reads from bams
+# k-mer counting with jellyfish
 rule extract_bam_reads:
     input:
         bam="data/filtered_alignments/{sample}.filtered.bam"
-    output:
-        fasta="data/aligned_reads/{sample}.fasta"
-    threads:
-        6
-    shell:
-        "samtools fasta {input.bam} > {output.fasta}"
-
-# k-mer counting with jellyfish
-rule count_kmers:
-    input:
-        fasta="data/aligned_reads/{sample}.fasta"
     params:
         kmer_size=config["kmer_size"]
     output:
@@ -58,7 +47,7 @@ rule count_kmers:
     threads:
         6
     shell:
-        "jellyfish count -t {threads} -m {params.kmer_size} -s 1000M -C -o {output.jf} {input.fasta}"
+        "samtools fasta {input.bam} | jellyfish count -t {threads} -m {params.kmer_size} -s 1000M -C -o {output.jf} /dev/fd/0"
 
 # jellyfish dump is single threaded
 # but specify number of threads to avoid
@@ -86,6 +75,10 @@ rule sort_kmers:
     shell:
         "cut -f 1 -d \" \" {input.counts} | sort -S 16G --parallel {threads} > {output.sorted_kmers}"
 
+# merge operation doesn't actually use
+# multiple threads but using all threads
+# lets us prevent other processes from running
+# so that we can use all memory as buffer
 rule merge_kmer_counts:
     input:
         sorted_kmers=expand("data/doc_freq/{sample}.sorted.counts",
@@ -97,7 +90,7 @@ rule merge_kmer_counts:
     threads:
         24
     shell:
-        "sort --batch-size {params.batch_size} --parallel {threads} -S 96G -m {input.sorted_kmers} | uniq -c > {output.kmer_doc_freqs}"
+        "sort --batch-size {params.batch_size} -S 110G -T data/doc_freq/ -m {input.sorted_kmers} | uniq -c > {output.kmer_doc_freqs}"
 
 rule create_pass_list:
     input:
@@ -112,7 +105,6 @@ rule create_pass_list:
         "scripts/create_bloomfilter.py --kmer-doc-freqs {input.kmer_doc_freqs} --output-bf {output.pass_list} --min-df {params.min_df}"
 
 # feature extraction
-
 rule create_random_projection:
     params:
         n_features=config["n_features"],
