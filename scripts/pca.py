@@ -49,8 +49,7 @@ if __name__ == "__main__":
     proj = pca.fit_transform(feature_matrix)
 
     labels = np.array(labels)
-    plt.scatter(proj[:, 0], proj[:, 1], label=labels)
-    plt.legend()
+    plt.scatter(proj[:, 0], proj[:, 1])
     plt.xlabel("Component 1", fontsize=18)
     plt.ylabel("Component 2", fontsize=18)
 
