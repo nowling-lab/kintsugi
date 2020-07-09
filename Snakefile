@@ -126,13 +126,13 @@ rule pca:
         feature_matrices=expand("data/feature_extraction/{sample}.features",
                                 sample=config["samples"])
     params:
-        sample_names=" ".join(config["samples"])
+        groups_fl=config["groups_fl"]
     output:
         plot="data/pca/pca_1_2.png"
     threads:
         4
     shell:
-        "scripts/pca.py --feature-matrices {input.feature_matrices} --sample-names {params.sample_names} --plot-fl {output.plot}"
+        "scripts/pca.py --feature-matrices {input.feature_matrices} --groups-fl {params.groups_fl} --plot-fl {output.plot}"
         
 # top-level rules
 rule setup_inputs:

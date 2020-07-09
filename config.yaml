@@ -36,5 +36,6 @@ n_features: 30
 n_rand_dim: 3000
 use_binary_features: "--binary"
 
+groups_fl: "bfm_bfs_2la_karyotypes.txt"
 
 
