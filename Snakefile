@@ -26,19 +26,6 @@ rule filter_bam:
     shell:
         "samtools view -b -@{threads} -F 0x0200 -F 0x0100 -F 0x004 -q {params.min_mapping_qual} {input.bam} {params.chrom} | samtools fasta - | jellyfish count -t {threads} -m {params.kmer_size} -s 1000M -C -o {output.jf} /dev/fd/0 {output}"
 
-# k-mer counting with jellyfish
-#rule extract_bam_reads:
-#    input:
-#        bam="data/filtered_alignments/{sample}.filtered.bam"
-#    params:
-#        kmer_size=config["kmer_size"]
-#    output:
-#        jf="data/kmer_counts/{sample}.jf"
-#    threads:
-#        6
-#    shell:
-#        "samtools fasta {input.bam} | jellyfish count -t {threads} -m {params.kmer_size} -s 1000M -C -o {output.jf} /dev/fd/0"
-
 # jellyfish dump is single threaded
 # but specify number of threads to avoid
 # overwhelming I/O
