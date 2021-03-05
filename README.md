@@ -1,5 +1,5 @@
 # kintsugi
-Inversion / pop structure detection with k-mers
+Pipeline for k-mer counting
 
 ## Requirements
 
