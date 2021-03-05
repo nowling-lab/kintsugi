@@ -18,7 +18,6 @@ samples: [AB0085_C, AB0103_C, AB0104_C, AB0117_C, AB0119_C,
           AB0270_C, AB0271_C, AB0272_C, AB0273_C, AB0274_C, AB0277_C, AB0278_C,
           AB0280_C, AB0281_C, AB0283_C, AB0284_C]
 
-chrom: "2R"
 min_mapping_quality: "10"
 
 # kmer-counting

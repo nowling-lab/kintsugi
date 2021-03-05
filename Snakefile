@@ -17,23 +17,22 @@ rule filter_bam:
         bai="data/input_alignments/{sample}.bai"
     params:
         min_mapping_qual=config["min_mapping_quality"],
-        chrom=config["chrom"],
         kmer_size=config["kmer_size"]
     output:
-        jf="data/kmer_counts/{sample}.jf"
+        jf="data/kmer_counts_{chrom}/{sample}_{chrom}.jf"
     threads:
         6
     shell:
-        "samtools view -b -@{threads} -F 0x0200 -F 0x0100 -F 0x004 -q {params.min_mapping_qual} {input.bam} {params.chrom} | samtools fasta - | jellyfish count -t {threads} -m {params.kmer_size} -s 1000M -C -o {output.jf} /dev/fd/0 {output}"
+        "samtools view -b -@2 -F 0x0200 -F 0x0100 -F 0x004 -q {params.min_mapping_qual} {input.bam} {wildcards.chrom} | samtools fasta - | jellyfish count -t 4 -m {params.kmer_size} -s 1000M -C -o {output.jf} /dev/fd/0 {output}"
 
 # jellyfish dump is single threaded
 # but specify number of threads to avoid
 # overwhelming I/O
 rule dump_kmers:
     input:
-        jf="data/kmer_counts/{sample}.jf"
+        jf="data/kmer_counts_{chrom}/{sample}_{chrom}.jf"
     output:
-        counts="data/kmer_counts_L{min_count}/{sample}.counts.gz"
+        counts="data/kmer_counts_{chrom}/{sample}_{chrom}_L{min_count}.counts.gz"
     threads:
         6
     shell:
@@ -41,10 +40,10 @@ rule dump_kmers:
 
 rule merge_counts:
     input:
-        lambda w: ["data/kmer_counts_L{}/{}.counts.gz".format(w.min_count, sample) \
+        lambda w: ["data/kmer_counts_{}/{}_{}_L{}.counts.gz".format(w.chrom, sample, w.chrom, w.min_count) \
                    for sample in config["samples"]]
     output:
-        "data/merged_counts/kmer_counts_L{min_count}.gz"
+        "data/merged_counts/merged_counts_{chrom}_L{min_count}.gz"
     threads:
         6
     shell:
@@ -52,5 +51,6 @@ rule merge_counts:
         
 rule count_kmers:
     input:
-        merged_kmer_counts=expand("data/merged_counts/kmer_counts_L{min_count}.gz",
-                           min_count=[1, 2, 3, 4, 5])
+        merged_kmer_counts=expand("data/merged_counts/merged_counts_{chrom}_L{min_count}.gz",
+                                  chrom=["2L", "2R"],
+                                  min_count=[1, 2, 3, 4, 5])
