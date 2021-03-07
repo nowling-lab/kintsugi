@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
         counts = [min_kmer]
         for stream in streams:
-            if stream.buffer[0] == min_kmer:
+            if stream.buffer != None and stream.buffer[0] == min_kmer:
                 counts.append(stream.buffer[1])
                 stream.next()
             else:
