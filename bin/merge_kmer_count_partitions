@@ -33,7 +33,6 @@ class Peaker:
     def __init__(self, stream):
         self.stream = stream
         self.next_item = next(self.stream)
-        print(self.next_item)
 
     def next(self):
         if self.next_item is None:
