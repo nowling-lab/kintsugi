@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
 setup() {
-    N_INDIVIDUALS=20
+    N_SAMPLES=20
     N_KMERS=5000
     KMER_LENGTH=21
     FRAC_ASSOCIATED=0.1
@@ -11,7 +11,7 @@ setup() {
 
     export DATA_PATH="${TEST_TEMP_DIR}/simulation"
     export KMER_PATH="${TEST_TEMP_DIR}/simulation/kmer_counts"
-    export PHENO_PATH="${TEST_TEMP_DIR}/phenotypes.labels"
+    export PHENO_PATH="${TEST_TEMP_DIR}/simulation/phenotypes.labels"
 
     simulate_kmer_data \
 	--n-samples ${N_SAMPLES} \
@@ -22,11 +22,49 @@ setup() {
 }
 
 @test "Workflow" {
-    run merge_kmer_count_partitions \
-	--partition-dir ${KMER_PATH} > \
-	gzip -c > ${TEST_TEMP_DIR}/merged_kmer_counts.tsv.gz
+    run bash -c "merge_kmer_count_partitions --partition-dir ${KMER_PATH} > ${TEST_TEMP_DIR}/merged_kmer_counts.tsv"
     
     [ "$status" -eq 0 ]
+    [ -e ${TEST_TEMP_DIR}/merged_kmer_counts.tsv ]
+
+    run gzip -k ${TEST_TEMP_DIR}/merged_kmer_counts.tsv
+
+    [ "$status" -eq 0 ]
     [ -e ${TEST_TEMP_DIR}/merged_kmer_counts.tsv.gz ]
+
+    run extract_features \
+	--kmer-count-fl ${TEST_TEMP_DIR}/merged_kmer_counts.tsv.gz \
+	--num-dimensions 8192 \
+	--sig-threshold 0.05 \
+	--labels-fl ${PHENO_PATH} \
+	--feature-scaling-before binary \
+	--features-fl ${TEST_TEMP_DIR}/partition_features.pkl
+
+    [ "$status" -eq 0 ]
+    [ -e ${TEST_TEMP_DIR}/partition_features.pkl ]
+
+    run merge_features \
+	--merged-features-fl ${TEST_TEMP_DIR}/merged_features.pkl \
+	--features-fl ${TEST_TEMP_DIR}/partition_features.pkl ${TEST_TEMP_DIR}/partition_features.pkl ${TEST_TEMP_DIR}/partition_features.pkl
+
+    [ "$status" -eq 0 ]
+    [ -e ${TEST_TEMP_DIR}/merged_features.pkl ]
+
+    run train_genotype_classifier \
+	--features-fl ${TEST_TEMP_DIR}/merged_features.pkl \
+	--labels-fl ${PHENO_PATH} \
+	--model-type lr \
+	--model-fl ${TEST_TEMP_DIR}/model.pkl
+
+    [ "$status" -eq 0 ]
+    [ -e ${TEST_TEMP_DIR}/model.pkl ]
+
+    run predict_inversion_genotypes \
+	--model-fl ${TEST_TEMP_DIR}/model.pkl \
+	--predictions-fl ${TEST_TEMP_DIR}/sample_0_predictions.tsv \
+	--kmer-counts-fl ${TEST_TEMP_DIR}/simulation/kmer_counts/sample_0_kmer_counts.tsv.gz
+
+    [ "$status" -eq 0 ]
+    [ -e ${TEST_TEMP_DIR}/sample_0_predictions.tsv ]
 }
 
