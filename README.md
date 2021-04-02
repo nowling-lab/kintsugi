@@ -23,9 +23,9 @@ To run the unit tests:
 $ nose2
 ```
 
-## Running Integration Tests
-To run the integration tests:
+## Running Smoke Tests
+To run the smoke tests:
 
 ```bash
-$ bats integration-tests/*.bats
+$ bats smoke-tests/*.bats
 ```
