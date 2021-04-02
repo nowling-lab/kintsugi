@@ -123,7 +123,7 @@ if __name__ == "__main__":
     labels_path = os.path.join(args.simulation_dir, "phenotypes.labels")
     write_sample_labels(labels_path, groups)
     
-    count_dir = os.path.join(args.simulation_dir, "kmer_count")
+    count_dir = os.path.join(args.simulation_dir, "kmer_counts")
     if not os.path.exists(count_dir):
         os.makedirs(count_dir)
 
