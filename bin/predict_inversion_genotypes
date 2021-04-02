@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     stream = KmerCountStreamer(args.kmer_counts_fl,
                                gzipped=True)
-    stream = CountScaler(stream, model["scaling_before"])
+    stream = CountScaler(stream, "binary")
     stream = ObservedFeatureFilter(stream, model["feature_filter"])
     stream = DictionarySampleIndexerTrainer(stream)
     stream = HashingIndexer(stream, model["num_dimensions"])
@@ -64,6 +64,9 @@ if __name__ == "__main__":
     consumer.run()
 
     feature_matrix = accumulator.create_feature_matrix().toarray()
+    feature_matrix = np.resize(feature_matrix,
+                               (feature_matrix.shape[0],
+                                model["num_dimensions"]))
     sample_names = accumulator.get_sample_names()
 
     feature_matrix = np.log1p(feature_matrix)

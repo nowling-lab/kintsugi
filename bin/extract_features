@@ -68,11 +68,6 @@ def parse_args():
                         type=str,
                         required=True)
 
-    parser.add_argument("--feature-scaling-before",
-                        type=str,
-                        default="binary",
-                        choices = ["binary", "log1p"])
-
     parser.add_argument("--features-fl",
                         type=str,
                         required=True)
@@ -93,9 +88,8 @@ if __name__ == "__main__":
                                       labels,
                                       args.sig_threshold)
 
-    if args.feature_scaling_before:
-        stream = CountScaler(stream,
-                             args.feature_scaling_before)
+    stream = CountScaler(stream,
+                         "binary")
 
     observed_features = ObservedFeatureFilterTrainer(stream)
 
@@ -111,11 +105,10 @@ if __name__ == "__main__":
 
     consumer.run()
 
-    feature_matrix = stream.create_feature_matrix()
+    feature_matrix = stream.create_feature_matrix().toarray()
 
     model = { "feature_matrix" : feature_matrix,
               "num_dimensions" : args.num_dimensions,
-              "scaling_before" : args.feature_scaling_before,
               "feature_filter" : observed_features.filter_,
               "sample_names" : stream.get_sample_names() }
 

@@ -85,13 +85,10 @@ if __name__ == "__main__":
     sample_labels = read_labels(args.labels_fl)
     features = joblib.load(args.features_fl)
     
-    feature_matrix = features["feature_matrix"].toarray()
+    feature_matrix = features["feature_matrix"]
     feature_matrix = np.log1p(feature_matrix)
     feature_matrix = scaler.fit_transform(feature_matrix)
     
-    print(sample_labels)
-    print(features["sample_names"])
-
     kept_indices = []
     kept_names = []
     for i, name in enumerate(features["sample_names"]):
@@ -110,7 +107,6 @@ if __name__ == "__main__":
     model = { "label_encoder" : encoder,
               "model" : model,
               "num_dimensions" : features["num_dimensions"],
-              "scaling_before" : features["scaling_before"],
               "scaling_after" : scaler,
               "feature_filter" : features["feature_filter"] }
 

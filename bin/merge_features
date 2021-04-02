@@ -18,6 +18,19 @@ limitations under the License.
 import argparse
 
 import joblib
+import numpy as np
+
+def read_labels(flname):
+    sample_labels = dict()
+    with open(flname) as fl:
+        for ln in fl:
+            cols = ln.strip().split(",")
+            pop = cols[0]
+
+            for sample_name in cols[1:]:
+                sample_labels[sample_name] = pop
+
+    return sample_labels
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -30,20 +43,33 @@ def parse_args():
                         type=str,
                         nargs="+",)
 
+    parser.add_argument("--num-dimensions",
+                        type=int,
+                        required=True)
+
+    parser.add_argument("--labels-fl",
+                        type=str,
+                        required=True)
+
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
 
-    scaling_before = None
+    sample_labels = read_labels(args.labels_fl)
+
+    n_samples = len(sample_labels)
+
     feature_filter = None
     sample_names = None
-    features = None
-    num_dimensions = 0
+    features = np.zeros((n_samples, args.num_dimensions))
     for model_flname in args.features_fls:
         model = joblib.load(model_flname)
-        num_dimensions = max(num_dimensions, model["num_dimensions"])
-        scaling_before = model["scaling_before"]
+        features += np.resize(model["feature_matrix"],
+                              (n_samples, args.num_dimensions))
+
+        if args.num_dimensions != model["num_dimensions"]:
+            raise Exception("Number of partition features ({}) does not match expected value ({})".format(model["num_dimensions"], args.num_dimensions))
 
         if feature_filter == None:
             feature_filter = model["feature_filter"]
@@ -59,14 +85,8 @@ if __name__ == "__main__":
                 elif sample_names[i] != sample_name:
                     raise Exception("Not all partitions have the same samples in the same order! Can't merge.")
 
-        if features == None:
-            features = model["feature_matrix"]
-        else:
-            features += model["feature_matrix"]
-
     model = { "feature_matrix" : features,
-              "num_dimensions" : num_dimensions,
-              "scaling_before" : scaling_before,
+              "num_dimensions" : args.num_dimensions,
               "feature_filter" : feature_filter,
               "sample_names" : sample_names }
 

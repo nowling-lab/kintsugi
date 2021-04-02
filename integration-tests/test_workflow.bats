@@ -37,13 +37,14 @@ setup() {
 	--num-dimensions 8192 \
 	--sig-threshold 0.05 \
 	--labels-fl ${PHENO_PATH} \
-	--feature-scaling-before binary \
 	--features-fl ${TEST_TEMP_DIR}/partition_features.pkl
 
     [ "$status" -eq 0 ]
     [ -e ${TEST_TEMP_DIR}/partition_features.pkl ]
 
     run merge_features \
+	--num-dimensions 8192 \
+	--labels-fl ${PHENO_PATH} \
 	--merged-features-fl ${TEST_TEMP_DIR}/merged_features.pkl \
 	--features-fl ${TEST_TEMP_DIR}/partition_features.pkl ${TEST_TEMP_DIR}/partition_features.pkl ${TEST_TEMP_DIR}/partition_features.pkl
 
