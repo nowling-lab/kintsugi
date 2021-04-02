@@ -15,3 +15,17 @@ Pipeline for k-mer counting
 
 ## Pipeline Output
 The pipeline will output gzipped kmer count text files under `data/merged_counts`.  The first line starts with "kmer" followed by the sample names, separated by tabs.  Each line after that starts with a k-mer string folllowed by the k-mer counts for each sample.
+
+## Running Unit Tests
+To run the unit tests:
+
+```bash
+$ nose2
+```
+
+## Running Integration Tests
+To run the integration tests:
+
+```bash
+$ bats integration-tests/*.bats
+```
