@@ -26,5 +26,15 @@ setup(name="kintsugi",
       zip_safe=False,
       python_requires=">=3.6",
       install_requires=["numpy>=0.19.1", "scipy>=0.19.1", "sklearn", "mmh3", "trashcompactor"],
-      scripts=["bin/partition_kmer_counts", "bin/merge_kmer_count_partitions"]
+      scripts=[
+          "bin/evaluate_predictions",
+          "bin/extract_features",
+          "bin/merge_features",
+          "bin/merge_kmer_count_partitions",
+          "bin/partition_kmer_counts",
+          "bin/predict_inversion_genotypes",
+          "bin/simulate_kmer_data",
+          "bin/split_data_set",
+          "bin/train_genotype_classifier"
+               ]
 )
