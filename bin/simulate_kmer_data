@@ -136,7 +136,6 @@ if __name__ == "__main__":
     sample_count_files = []
     for sample_name in sample_names:
         fl = gzip.open(os.path.join(count_dir, sample_name + "_kmer_counts.tsv.gz"), "wt")
-        fl.write("kmer\t{}\n".format(sample_name))
         sample_count_files.append(fl)
         
     kmer_stream = kmer_generator(args.kmer_length)
