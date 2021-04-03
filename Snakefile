@@ -7,18 +7,17 @@ import os
 ## from base dir
 ##
 
-label_fl_path = os.path.join(config["base_dir"],
-                             config["labels"])
+labels_fl_path = os.path.join(config["base_dir"],
+                              config["labels_fl"])
 
 sample_data_paths = dict()
 data_fl_path = os.path.join(config["base_dir"],
-                            config["input_data"])
+                            config["input_paths_fl"])
 with open(data_fl_path) as fl:
     for ln in fl:
         cols = ln.strip().split()
         sample_data_paths[cols[0]] = os.path.join(config["base_dir"],
                                                   cols[1])      
-
 
 rule link_counts:
     params:
@@ -51,8 +50,45 @@ rule merge_partitions:
         1
     shell:
         "merge_kmer_count_partitions --partition-dir data/partitioned_kmer_counts/partition_{wildcards.part_num} | gzip -c > {output}"
+
+rule extract_features:
+    input:
+        partition_fl="data/merged_kmer_counts/partition_{part_num}.gz",
+        labels_fl=labels_fl_path
+    params:
+        n_dimensions=config["n_features"],
+        sig_threshold=config["sig_threshold"]
+    output:
+        "data/extracted_features/partition_{part_num}.pkl"
+    threads:
+        1
+    shell:
+        "extract_features --kmer-count-fl {input.partition_fl} --num-dimensions {params.n_dimensions} --sig-threshold {params.sig_threshold} --labels-fl {input.labels_fl} --features-fl {output}"
+
+rule merge_features:
+    input:
+        feature_fls=["data/extracted_features/partition_{}.pkl".format(part_num) for part_num in range(config["n_partitions"])],
+        labels_fl=labels_fl_path
+    params:
+        n_dimensions=config["n_features"]
+    output:
+        "data/merged_features.pkl"
+    threads:
+        1
+    shell:
+        "merge_features --num-dimensions {params.n_dimensions} --labels-fl {input.labels_fl} --features-fl {input.feature_fls} --merged-features-fl {output}"
+
+rule train_genotype_classifier:
+    input:
+        features="data/merged_features.pkl",
+        labels_fl=labels_fl_path
+    output:
+        "data/model.pkl"
+    threads:
+        1
+    shell:
+        "train_genotype_classifier --features-fl {input.features} --labels-fl {input.labels_fl} --model-type lr --model-fl {output}"
         
 rule run_experiments:
     input:
-        merged_partitions=expand("data/merged_kmer_counts/partition_{part_num}.gz",
-                                 part_num=range(config["n_partitions"]))
+        merged_features="data/merged_features.pkl"

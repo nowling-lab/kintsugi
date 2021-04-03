@@ -1,9 +1,9 @@
 base_dir: "simulated_data"
-input_data: "data_paths.tsv"
-labels: "phenotypes.labels"
+input_paths_fl: "data_paths.tsv"
+labels_fl: "phenotypes.labels"
 kmer_size: 21
 sig_threshold: 0.01
 n_partitions: 4
 n_reducers: 4
-
+n_features: 8192
 
