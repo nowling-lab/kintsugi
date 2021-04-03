@@ -59,13 +59,9 @@ if __name__ == "__main__":
     args = parse_args()
 
     input_streams = []
-    header = ["kmer"]
     for flname in glob.glob(os.path.join(args.partition_dir, "*.tsv.gz")):
         stream = Peaker(GzipStream(flname))
-
-        sample_name = stream.next_item[1]
         input_streams.append(stream)
-        header.append(sample_name)
 
     while True:
         head_kmers = []
