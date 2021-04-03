@@ -24,7 +24,7 @@ setup() {
 @test "K-mer Count Partitioning and Merging" {
     for i in `seq 1 ${N_SAMPLES}`;
     do
-	run bash -c "zcat ${KMER_PATH}/sample_${i}_kmer_counts.tsv.gz | partition_kmer_counts --n-partitions 4 --sample-name ${i} --output-dir ${TEST_TEMP_DIR}/kmer_count_partitions"
+	run bash -c "zcat ${KMER_PATH}/sample_${i}_kmer_counts.tsv.gz | partition_kmer_counts --n-partitions 4 --sample-name sample_${i} --output-dir ${TEST_TEMP_DIR}/kmer_count_partitions"
 
 	[ "$status" -eq 0 ]
 	[ -e ${TEST_TEMP_DIR}/kmer_count_partitions/partition_0/sample_${i}.tsv.gz ]
