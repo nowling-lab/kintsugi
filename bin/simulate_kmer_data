@@ -122,11 +122,17 @@ if __name__ == "__main__":
         
     labels_path = os.path.join(args.simulation_dir, "phenotypes.labels")
     write_sample_labels(labels_path, groups)
-    
+
     count_dir = os.path.join(args.simulation_dir, "kmer_counts")
     if not os.path.exists(count_dir):
         os.makedirs(count_dir)
 
+    data_files_path = os.path.join(args.simulation_dir, "data_paths.tsv")
+    with open(data_files_path, "w") as fl:
+        for name in sample_names:
+            data_path = os.path.join("kmer_counts", name + "_kmer_counts.tsv.gz")
+            fl.write("{}\t{}\n".format(name, data_path))
+        
     sample_count_files = []
     for sample_name in sample_names:
         fl = gzip.open(os.path.join(count_dir, sample_name + "_kmer_counts.tsv.gz"), "wt")
