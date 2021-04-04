@@ -1,31 +1,14 @@
-import os
-
-##
-## Determine paths of k-mer count files and labels
-## from base dir
-##
-
-labels_fl_path = os.path.join(config["base_dir"],
-                              config["labels_fl"])
-
-sample_data_paths = dict()
-data_fl_path = os.path.join(config["base_dir"],
-                            config["input_paths_fl"])
-with open(data_fl_path) as fl:
-    for ln in fl:
-        cols = ln.strip().split()
-        sample_data_paths[cols[0]] = os.path.join(config["base_dir"],
-                                                  cols[1])      
+configfile: "config.yaml"
 
 rule link_counts:
     params:
-        input_path = lambda w: sample_data_paths[w.sample_name]
+        input_path = lambda w: config["sample_data_paths"][w.sample_name]
     output:
         "data/sample_kmer_counts/{sample_name}.gz"
     threads:
         1
     shell:
-        "ln -s ../../{params.input_path} {output}"
+        "ln -s {params.input_path} {output}"
 
 rule partition_kmer_counts:
     input:
@@ -41,7 +24,7 @@ rule partition_kmer_counts:
 
 rule merge_partitions:
     input:
-        ["data/partitioned_kmer_counts/partition_{part_num}/%s.tsv.gz" % sample_name for sample_name in sample_data_paths.keys()]
+        ["data/partitioned_kmer_counts/partition_{part_num}/%s.tsv.gz" % sample_name for sample_name in config["sample_data_paths"].keys()]
     output:
         "data/merged_kmer_counts/partition_{part_num}.gz"
     threads:
@@ -52,7 +35,7 @@ rule merge_partitions:
 rule extract_features:
     input:
         partition_fl="data/merged_kmer_counts/partition_{part_num}.gz",
-        labels_fl=labels_fl_path
+        labels_fl=lambda w: config["labels_fl"]
     params:
         n_dimensions=config["n_features"],
         sig_threshold=config["sig_threshold"]
@@ -66,7 +49,7 @@ rule extract_features:
 rule merge_features:
     input:
         feature_fls=["data/extracted_features/partition_{}.pkl".format(part_num) for part_num in range(config["n_partitions"])],
-        labels_fl=labels_fl_path
+        labels_fl=lambda w: config["labels_fl"]
     params:
         n_dimensions=config["n_features"]
     output:
@@ -79,7 +62,7 @@ rule merge_features:
 rule train_genotype_classifier:
     input:
         features="data/merged_features.pkl",
-        labels_fl=labels_fl_path
+        labels_fl=lambda w: config["labels_fl"]
     output:
         "data/model.pkl"
     threads:

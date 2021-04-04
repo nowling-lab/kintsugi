@@ -25,7 +25,7 @@ setup(name="kintsugi",
       license="Apache License, Version 2.0",
       zip_safe=False,
       python_requires=">=3.6",
-      install_requires=["numpy>=0.19.1", "scipy>=0.19.1", "sklearn", "mmh3", "trashcompactor"],
+      install_requires=["numpy>=0.19.1", "scipy>=0.19.1", "sklearn", "mmh3", "trashcompactor", "snakemake", "pyyaml"],
       packages=find_packages(include=["kintsugi", "kintsugi.*"]),
       package_data={
           "kintsugi" : ["snakefiles/*.smk"]
@@ -39,6 +39,7 @@ setup(name="kintsugi",
           "bin/predict_inversion_genotypes",
           "bin/simulate_kmer_data",
           "bin/split_data_set",
-          "bin/train_genotype_classifier"
+          "bin/train_genotype_classifier",
+          "bin/kintsugi_cli"
       ]
 )

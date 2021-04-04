@@ -129,9 +129,9 @@ if __name__ == "__main__":
 
     data_files_path = os.path.join(args.simulation_dir, "data_paths.tsv")
     with open(data_files_path, "w") as fl:
-        for name in sample_names:
+        for name, label in zip(sample_names, sample_labels):
             data_path = os.path.join("kmer_counts", name + "_kmer_counts.tsv.gz")
-            fl.write("{}\t{}\n".format(name, data_path))
+            fl.write("{}\t{}\t{}\n".format(name, label, data_path))
         
     sample_count_files = []
     for sample_name in sample_names:

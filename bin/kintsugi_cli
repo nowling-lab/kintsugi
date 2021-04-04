@@ -1,0 +1,119 @@
+#!/usr/bin/env python
+"""
+Copyright 2021 Ronald J. Nowling
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+import argparse
+from collections import defaultdict
+import os
+
+import snakemake
+import yaml
+
+import kintsugi
+
+def read_data_description(flname):
+    basedir = os.path.dirname(flname)
+    sample_paths = {}
+    sample_groups = defaultdict(set)
+    with open(flname) as fl:
+        for ln in fl:
+            cols = ln.split()
+            sample_name = cols[0]
+            group = cols[1]
+            sample_path = os.path.join(basedir,
+                                       cols[2])
+            abs_sample_path = os.path.abspath(sample_path)
+            sample_paths[sample_name] = abs_sample_path
+            sample_groups[group].add(sample_name)
+
+    return sample_paths, sample_groups
+
+def write_sample_labels(flname, groups):
+    with open(flname, "w") as fl:
+        for name, samples in groups.items():
+            fl.write(name)
+            fl.write(",")
+            fl.write(",".join(samples))
+            fl.write("\n")
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    subparsers = parser.add_subparsers(dest="mode", required=True)
+
+    train_parser = subparsers.add_parser("train",
+                                         help="Train a model")
+
+    train_parser.add_argument("--num-dimensions",
+                              type=int,
+                              required=True)
+
+    train_parser.add_argument("--sig-threshold",
+                              type=float,
+                              required=True)
+
+    train_parser.add_argument("--n-partitions",
+                              type=int,
+                              required=True)
+
+    train_parser.add_argument("--n-cores",
+                              type=int,
+                              required=True)
+    
+    train_parser.add_argument("--data-description-fl",
+                              type=str,
+                              required=True)
+
+    train_parser.add_argument("--workdir",
+                              type=str,
+                              required=True)
+    
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_args()
+
+    if args.mode == "train":
+        sample_paths, sample_groups = read_data_description(args.data_description_fl)
+
+        if not os.path.exists(args.workdir):
+            os.makedirs(args.workdir)
+
+        sample_labels_path = os.path.join(args.workdir,
+                                          "labels")
+        write_sample_labels(sample_labels_path, sample_groups)
+        
+        config = { "n_features" : args.num_dimensions,
+                   "sig_threshold" : args.sig_threshold,
+                   "n_partitions" : args.n_partitions,
+                   "labels_fl" : "labels",
+                   "sample_data_paths" : sample_paths }
+
+        config_path = os.path.join(args.workdir,
+                                   "config.yaml")
+
+        with open(config_path, "w") as fl:
+            yaml.dump(config, fl)
+
+        snakefile = os.path.join(os.path.dirname(kintsugi.__file__),
+                                 "snakefiles",
+                                 "train.smk")
+
+        status = snakemake.snakemake(snakefile,
+                                     printshellcmds=True,
+                                     targets=["run_experiments"],
+                                     cores=args.n_cores,
+                                     workdir=args.workdir)
