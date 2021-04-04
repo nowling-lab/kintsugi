@@ -26,6 +26,10 @@ setup(name="kintsugi",
       zip_safe=False,
       python_requires=">=3.6",
       install_requires=["numpy>=0.19.1", "scipy>=0.19.1", "sklearn", "mmh3", "trashcompactor"],
+      packages=find_packages(include=["kintsugi", "kintsugi.*"]),
+      package_data={
+          "kintsugi" : ["snakefiles/*.smk"]
+      },
       scripts=[
           "bin/evaluate_predictions",
           "bin/extract_features",
@@ -36,5 +40,5 @@ setup(name="kintsugi",
           "bin/simulate_kmer_data",
           "bin/split_data_set",
           "bin/train_genotype_classifier"
-               ]
+      ]
 )

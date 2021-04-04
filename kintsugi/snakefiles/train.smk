@@ -1,5 +1,3 @@
-configfile: "config.yaml"
-
 import os
 
 ##
