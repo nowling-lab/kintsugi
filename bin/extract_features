@@ -24,12 +24,12 @@ import numpy as np
 from trashcompactor._base import TerminalConsumer
 from trashcompactor.inputs import KmerCountStreamer
 from trashcompactor.accumulators import MatrixAccumulator
-from trashcompactor.operators.feature_filters import ObservedFeatureFilterTrainer
-from trashcompactor.operators.feature_filters import AssociationTestingFilter
-from trashcompactor.operators.feature_indexing import HashingIndexer
-from trashcompactor.operators.feature_scaling import CountScaler
-from trashcompactor.operators.sample_indexing import DictionarySampleIndexer
 from trashcompactor.outputs import KmerCountOutput
+from trashcompactor.transformers.feature_filters import ObservedFeatureFilterTrainer
+from trashcompactor.transformers.feature_filters import AssociationTestingFilter
+from trashcompactor.transformers.feature_indexing import HashingIndexer
+from trashcompactor.transformers.feature_scaling import CountScaler
+from trashcompactor.transformers.sample_indexing import DictionarySampleIndexer
 
 def read_labels(flname):
     sample_labels = dict()

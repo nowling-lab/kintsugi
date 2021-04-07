@@ -24,10 +24,10 @@ import numpy as np
 from trashcompactor._base import TerminalConsumer
 from trashcompactor.inputs import KmerCountStreamer
 from trashcompactor.accumulators import MatrixAccumulator
-from trashcompactor.operators.feature_filters import ObservedFeatureFilter
-from trashcompactor.operators.feature_indexing import HashingIndexer
-from trashcompactor.operators.feature_scaling import CountScaler
-from trashcompactor.operators.sample_indexing import DictionarySampleIndexerTrainer
+from trashcompactor.transformers.feature_filters import ObservedFeatureFilter
+from trashcompactor.transformers.feature_indexing import HashingIndexer
+from trashcompactor.transformers.feature_scaling import CountScaler
+from trashcompactor.transformers.sample_indexing import DictionarySampleIndexerTrainer
 
 def parse_args():
     parser = argparse.ArgumentParser()
