@@ -73,7 +73,7 @@ def parse_args():
                         type=str,
                         required=True)
                         
-    parser.add_argument("--output-kmer-fl",
+    parser.add_argument("--sig-kmer-output-fl",
                         type=str)
 
     return parser.parse_args()
@@ -92,10 +92,10 @@ if __name__ == "__main__":
                                       labels,
                                       args.sig_threshold)
                                       
-    if args.output_kmer_fl != None:
-        gzipped = args.output_kmer_fl.endswith(".gz")
+    if args.sig_kmer_output_fl != None:
+        gzipped = args.sig_kmer_output_fl.endswith(".gz")
         stream = KmerCountOutput(stream,
-                                 args.output_kmer_fl,
+                                 args.sig_kmer_output_fl,
                                  gzipped=gzipped)
 
     stream = CountScaler(stream,

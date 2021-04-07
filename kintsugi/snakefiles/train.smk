@@ -38,13 +38,14 @@ rule extract_features:
         labels_fl=lambda w: config["labels_fl"]
     params:
         n_dimensions=config["n_features"],
-        sig_threshold=config["sig_threshold"]
+        sig_threshold=config["sig_threshold"],
+        output_fl=lambda w: "--sig-kmer-output-fl data/significant_kmers/sig_kmers_partition_{}.tsv.gz".format(w.part_num) if config["output_sig_kmers"] else ""
     output:
         "data/extracted_features/partition_{part_num}.pkl"
     threads:
         1
     shell:
-        "extract_features --kmer-count-fl {input.partition_fl} --num-dimensions {params.n_dimensions} --sig-threshold {params.sig_threshold} --labels-fl {input.labels_fl} --features-fl {output}"
+        "extract_features --kmer-count-fl {input.partition_fl} --num-dimensions {params.n_dimensions} --sig-threshold {params.sig_threshold} --labels-fl {input.labels_fl} --features-fl {output} {params.output_fl}"
 
 rule merge_features:
     input:

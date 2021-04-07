@@ -100,7 +100,8 @@ if __name__ == "__main__":
                    "sig_threshold" : args.sig_threshold,
                    "n_partitions" : args.n_partitions,
                    "labels_fl" : "labels",
-                   "sample_data_paths" : sample_paths }
+                   "sample_data_paths" : sample_paths,
+                   "output_sig_kmers" : True }
 
         config_path = os.path.join(args.workdir,
                                    "config.yaml")
