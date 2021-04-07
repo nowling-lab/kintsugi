@@ -23,12 +23,13 @@ import numpy as np
 
 from trashcompactor._base import TerminalConsumer
 from trashcompactor.inputs import KmerCountStreamer
-from trashcompactor.operators.accumulators import MatrixAccumulator
+from trashcompactor.accumulators import MatrixAccumulator
 from trashcompactor.operators.feature_filters import ObservedFeatureFilterTrainer
 from trashcompactor.operators.feature_filters import AssociationTestingFilter
 from trashcompactor.operators.feature_indexing import HashingIndexer
 from trashcompactor.operators.feature_scaling import CountScaler
 from trashcompactor.operators.sample_indexing import DictionarySampleIndexer
+from trashcompactor.outputs import KmerCountOutput
 
 def read_labels(flname):
     sample_labels = dict()
@@ -71,6 +72,9 @@ def parse_args():
     parser.add_argument("--features-fl",
                         type=str,
                         required=True)
+                        
+    parser.add_argument("--output-kmer-fl",
+                        type=str)
 
     return parser.parse_args()
 
@@ -87,6 +91,12 @@ if __name__ == "__main__":
     stream = AssociationTestingFilter(stream,
                                       labels,
                                       args.sig_threshold)
+                                      
+    if args.output_kmer_fl != None:
+        gzipped = args.output_kmer_fl.endswith(".gz")
+        stream = KmerCountOutput(stream,
+                                 args.output_kmer_fl,
+                                 gzipped=gzipped)
 
     stream = CountScaler(stream,
                          "binary")

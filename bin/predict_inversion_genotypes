@@ -23,7 +23,7 @@ import numpy as np
 
 from trashcompactor._base import TerminalConsumer
 from trashcompactor.inputs import KmerCountStreamer
-from trashcompactor.operators.accumulators import MatrixAccumulator
+from trashcompactor.accumulators import MatrixAccumulator
 from trashcompactor.operators.feature_filters import ObservedFeatureFilter
 from trashcompactor.operators.feature_indexing import HashingIndexer
 from trashcompactor.operators.feature_scaling import CountScaler
