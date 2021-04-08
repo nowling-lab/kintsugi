@@ -109,6 +109,7 @@ if __name__ == "__main__":
               "model_type" : args.model_type,
               "num_dimensions" : features["num_dimensions"],
               "scaling_after" : scaler,
-              "feature_filter" : features["feature_filter"] }
+              "feature_filter" : features["feature_filter"],
+              "unique_features" : features["unique_features"] }
 
     joblib.dump(model, args.model_fl)

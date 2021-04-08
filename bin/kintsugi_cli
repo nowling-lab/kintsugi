@@ -90,10 +90,10 @@ def train_model(data_description_fl, workdir, n_cores, config, model_output_fl=N
 def print_model_details(model_fl):
     model = joblib.load(args.model_fl)
     
-    print("Classes:", model["encoder"].classes_)
+    print("Classes:", model["label_encoder"].classes_)
     print("Model type:", model["model_type"])
     print("Number of dimensions:", model["num_dimensions"])
-    print("Number of unique features:", len(model["feature_filter"]))
+    print("Number of unique features:", model["unique_features"])
 
 def parse_args():
     parser = argparse.ArgumentParser()

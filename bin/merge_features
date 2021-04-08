@@ -63,6 +63,7 @@ if __name__ == "__main__":
     feature_filter = None
     sample_names = None
     features = np.zeros((n_samples, args.num_dimensions))
+    unique_features = 0
     for model_flname in args.features_fls:
         model = joblib.load(model_flname)
         features += np.resize(model["feature_matrix"],
@@ -70,6 +71,13 @@ if __name__ == "__main__":
 
         if args.num_dimensions != model["num_dimensions"]:
             raise Exception("Number of partition features ({}) does not match expected value ({})".format(model["num_dimensions"], args.num_dimensions))
+
+        # Unions of bloom filters do not preserve
+        # the counts.  We can guarantee that the
+        # features in each partition are disjoint
+        # because we divided them by hash.  Consequently,
+        # we can sum up the counts from all of the filters.
+        unique_features += len(model["feature_filter"])
 
         if feature_filter == None:
             feature_filter = model["feature_filter"]
@@ -88,7 +96,8 @@ if __name__ == "__main__":
     model = { "feature_matrix" : features,
               "num_dimensions" : args.num_dimensions,
               "feature_filter" : feature_filter,
-              "sample_names" : sample_names }
+              "sample_names" : sample_names,
+              "unique_features" : unique_features }
 
     joblib.dump(model,
                 args.merged_features_fl)
