@@ -20,6 +20,7 @@ from collections import defaultdict
 import os
 import shutil
 
+import joblib
 import snakemake
 import yaml
 
@@ -51,6 +52,48 @@ def write_sample_labels(flname, groups):
             fl.write(",")
             fl.write(",".join(samples))
             fl.write("\n")
+
+def train_model(data_description_fl, workdir, n_cores, config, model_output_fl=None):
+    sample_paths, sample_groups = read_data_description(data_description_fl)
+
+    if not os.path.exists(workdir):
+        os.makedirs(workdir)
+
+    sample_labels_path = os.path.join(workdir,
+                                      "labels")
+    write_sample_labels(sample_labels_path, sample_groups)
+    
+    config["sample_data_paths"] = sample_paths
+    config["labels_fl"] = "labels"
+
+
+    config_path = os.path.join(workdir,
+                               "config.yaml")
+
+    with open(config_path, "w") as fl:
+        yaml.dump(config, fl)
+
+    snakefile = os.path.join(os.path.dirname(kintsugi.__file__),
+                             "snakefiles",
+                             "train.smk")
+
+    successful_execution = snakemake.snakemake(snakefile,
+                                               printshellcmds=True,
+                                               targets=["run_experiments"],
+                                               cores=n_cores,
+                                               workdir=workdir)
+                                 
+    if successful_execution and model_output_fl:
+        model_src = os.path.join(workdir, "data/model.pkl")
+        shutil.copy2(model_src, model_output_fl)
+        
+def print_model_details(model_fl):
+    model = joblib.load(args.model_fl)
+    
+    print("Classes:", model["encoder"].classes_)
+    print("Model type:", model["model_type"])
+    print("Number of dimensions:", model["num_dimensions"])
+    print("Number of unique features:", len(model["feature_filter"]))
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -87,45 +130,32 @@ def parse_args():
     train_parser.add_argument("--model-output-fl",
                               type=str)
     
+    inspect_parser = subparsers.add_parser("inspect-model")
+    
+    inspect_parser.add_argument("--model-fl",
+                                type=str,
+                                required=True)
+    
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
 
     if args.mode == "train":
-        sample_paths, sample_groups = read_data_description(args.data_description_fl)
-
-        if not os.path.exists(args.workdir):
-            os.makedirs(args.workdir)
-
-        sample_labels_path = os.path.join(args.workdir,
-                                          "labels")
-        write_sample_labels(sample_labels_path, sample_groups)
-        
         config = { "n_features" : args.num_dimensions,
                    "sig_threshold" : args.sig_threshold,
                    "n_partitions" : args.n_partitions,
-                   "labels_fl" : "labels",
-                   "sample_data_paths" : sample_paths,
                    "output_sig_kmers" : True }
-
-        config_path = os.path.join(args.workdir,
-                                   "config.yaml")
-
-        with open(config_path, "w") as fl:
-            yaml.dump(config, fl)
-
-        snakefile = os.path.join(os.path.dirname(kintsugi.__file__),
-                                 "snakefiles",
-                                 "train.smk")
-
-        successful_execution = snakemake.snakemake(snakefile,
-                                                   printshellcmds=True,
-                                                   targets=["run_experiments"],
-                                                   cores=args.n_cores,
-                                                   workdir=args.workdir)
-                                     
-        if successful_execution and args.model_output_fl:
-            model_src = os.path.join(args.workdir, "data/model.pkl")
-            shutil.copy2(model_src, args.mdoel_output_fl)
+                   
+        train_model(args.data_description_fl,
+                    args.workdir,
+                    args.n_cores,
+                    config,
+                    model_output_fl=args.model_output_fl)
+            
+    elif args.mode == "inspect-model":
+        print_model_details(args.model_fl)
+        
+    else:
+        raise Exception("Unknown command '{}'".format(args.mdoe))
             

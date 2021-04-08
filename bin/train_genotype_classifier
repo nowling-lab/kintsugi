@@ -106,6 +106,7 @@ if __name__ == "__main__":
 
     model = { "label_encoder" : encoder,
               "model" : model,
+              "model_type" : args.model_type,
               "num_dimensions" : features["num_dimensions"],
               "scaling_after" : scaler,
               "feature_filter" : features["feature_filter"] }
