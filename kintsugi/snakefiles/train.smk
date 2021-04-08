@@ -73,4 +73,4 @@ rule train_genotype_classifier:
         
 rule run_experiments:
     input:
-        merged_features="data/merged_features.pkl"
+	    model="data/model.pkl"
