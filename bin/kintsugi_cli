@@ -33,10 +33,12 @@ def read_data_description(flname):
             cols = ln.split()
             sample_name = cols[0]
             group = cols[1]
-            sample_path = os.path.join(basedir,
-                                       cols[2])
-            abs_sample_path = os.path.abspath(sample_path)
-            sample_paths[sample_name] = abs_sample_path
+            sample_path = cols[2]
+            if not os.path.isabs(sample_path):
+                sample_path = os.path.join(basedir,
+                                           sample_path)
+            sample_path = os.path.normpath(sample_path)
+            sample_paths[sample_name] = sample_path
             sample_groups[group].add(sample_name)
 
     return sample_paths, sample_groups
