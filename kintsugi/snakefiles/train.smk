@@ -1,14 +1,14 @@
 configfile: "config.yaml"
 
 rule link_counts:
-    params:
-        input_path = lambda w: config["sample_data_paths"][w.sample_name]
+    input:
+        lambda w: config["sample_data_paths"][w.sample_name]
     output:
         "data/sample_kmer_counts/{sample_name}.gz"
     threads:
         1
     shell:
-        "ln -s {params.input_path} {output}"
+        "ln -s {input} {output}"
 
 rule partition_kmer_counts:
     input:
