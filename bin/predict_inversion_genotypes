@@ -77,5 +77,5 @@ if __name__ == "__main__":
     text_labels = model["label_encoder"].inverse_transform(pred_labels)
 
     with open(args.predictions_fl, "w") as fl:
-        for sample_name, sample_labels in zip(sample_names, text_labels):
-            fl.write("{}\t{}\n".format(sample_name, sample_labels))
+        for name, label in zip(sample_names, text_labels):
+            fl.write("{}\t{}\n".format(name, label))
