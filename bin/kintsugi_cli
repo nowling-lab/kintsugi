@@ -19,6 +19,7 @@ import argparse
 from collections import defaultdict
 import os
 import shutil
+import sys
 
 import joblib
 import snakemake
@@ -27,6 +28,13 @@ import yaml
 import kintsugi
 
 def read_data_description(flname):
+    """
+    Reads a three-column, tab-separated file of sample names,
+    labels, and paths.  Returns a pair of dicts.  The first
+    dict has sample names as keys and paths as values. The
+    second dict has class labels as keys and sets of sample
+    names as values.
+    """
     basedir = os.path.dirname(flname)
     sample_paths = {}
     sample_groups = defaultdict(set)
@@ -44,6 +52,27 @@ def read_data_description(flname):
             sample_groups[group].add(sample_name)
 
     return sample_paths, sample_groups
+
+def read_data_paths(flname):
+    """
+    Reads a two-column, tab-separated file of sample names
+    and paths.  Returns a dict with sample names as keys and
+    paths as values.
+    """
+    basedir = os.path.dirname(flname)
+    sample_paths = {}
+    with open(flname) as fl:
+        for ln in fl:
+            cols = ln.split()
+            sample_name = cols[0]
+            sample_path = cols[1]
+            if not os.path.isabs(sample_path):
+                sample_path = os.path.join(basedir,
+                                           sample_path)
+            sample_path = os.path.normpath(sample_path)
+            sample_paths[sample_name] = sample_path
+
+    return sample_paths
 
 def write_sample_labels(flname, groups):
     with open(flname, "w") as fl:
@@ -86,6 +115,47 @@ def train_model(data_description_fl, workdir, n_cores, config, model_output_fl=N
     if successful_execution and model_output_fl:
         model_src = os.path.join(workdir, "data/model.pkl")
         shutil.copy2(model_src, model_output_fl)
+
+    return successful_execution
+        
+def apply_model(data_paths_fl, workdir, model_path, n_cores, predictions_output_fl):
+    sample_paths = read_data_paths(data_paths_fl)
+
+    if not os.path.exists(workdir):
+        os.makedirs(workdir)
+
+    model_path = os.path.normpath(model_path)
+    if not os.path.isabs(model_path):
+        model_path = os.path.abspath(model_path)
+
+    config = {
+        "sample_data_paths" : sample_paths,
+        "model_fl" : model_path
+        }
+
+    config_path = os.path.join(workdir,
+                               "config.yaml")
+
+    print(config)
+
+    with open(config_path, "w") as fl:
+        yaml.dump(config, fl)
+
+    snakefile = os.path.join(os.path.dirname(kintsugi.__file__),
+                             "snakefiles",
+                             "apply_model.smk")
+
+    successful_execution = snakemake.snakemake(snakefile,
+                                               printshellcmds=True,
+                                               targets=["run_experiments"],
+                                               cores=n_cores,
+                                               workdir=workdir)
+                                 
+    if successful_execution and predictions_output_fl:
+        model_src = os.path.join(workdir, "data/all_predictions.tsv")
+        shutil.copy2(model_src, predictions_output_fl)
+
+    return successful_execution
         
 def print_model_details(model_fl):
     model = joblib.load(args.model_fl)
@@ -135,7 +205,29 @@ def parse_args():
     inspect_parser.add_argument("--model-fl",
                                 type=str,
                                 required=True)
+
+    apply_parser = subparsers.add_parser("apply-model")
+
+    apply_parser.add_argument("--data-paths-fl",
+                              type=str,
+                              required=True)
+
+    apply_parser.add_argument("--model-fl",
+                              type=str,
+                              required=True)
     
+    apply_parser.add_argument("--workdir",
+                              type=str,
+                              required=True)
+                              
+    apply_parser.add_argument("--predictions-output-fl",
+                              type=str,
+                              required=True)
+
+    apply_parser.add_argument("--n-cores",
+                              type=int,
+                              required=True)
+
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -147,15 +239,27 @@ if __name__ == "__main__":
                    "n_partitions" : args.n_partitions,
                    "output_sig_kmers" : True }
                    
-        train_model(args.data_description_fl,
-                    args.workdir,
-                    args.n_cores,
-                    config,
-                    model_output_fl=args.model_output_fl)
+        success = train_model(args.data_description_fl,
+                              args.workdir,
+                              args.n_cores,
+                              config,
+                              model_output_fl=args.model_output_fl)
+
+        if not success:
+            sys.exit(1)
             
     elif args.mode == "inspect-model":
         print_model_details(args.model_fl)
-        
+
+    elif args.mode == "apply-model":
+        success = apply_model(args.data_paths_fl,
+                              args.workdir,
+                              args.model_fl,
+                              args.n_cores,
+                              args.predictions_output_fl)
+
+        if not success:
+            sys.exit(1)
     else:
         raise Exception("Unknown command '{}'".format(args.mdoe))
             

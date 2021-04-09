@@ -127,12 +127,18 @@ if __name__ == "__main__":
     if not os.path.exists(count_dir):
         os.makedirs(count_dir)
 
+    data_labels_path = os.path.join(args.simulation_dir, "data_labels_paths.tsv")
+    with open(data_labels_path, "w") as fl:
+        for name, label in zip(sample_names, sample_labels):
+            data_path = os.path.join("kmer_counts", name + "_kmer_counts.tsv.gz")
+            fl.write("{}\t{}\t{}\n".format(name, label, data_path))
+
     data_files_path = os.path.join(args.simulation_dir, "data_paths.tsv")
     with open(data_files_path, "w") as fl:
         for name, label in zip(sample_names, sample_labels):
             data_path = os.path.join("kmer_counts", name + "_kmer_counts.tsv.gz")
-            fl.write("{}\t{}\t{}\n".format(name, label, data_path))
-        
+            fl.write("{}\t{}\n".format(name, data_path))
+
     sample_count_files = []
     for sample_name in sample_names:
         fl = gzip.open(os.path.join(count_dir, sample_name + "_kmer_counts.tsv.gz"), "wt")
