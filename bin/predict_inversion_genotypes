@@ -40,6 +40,10 @@ def parse_args():
                         type=str,
                         required=True)
 
+    parser.add_argument("--sample-name",
+                        type=str,
+                        required=True)
+
     parser.add_argument("--model-fl",
                         type=str,
                         required=True)
@@ -53,7 +57,8 @@ if __name__ == "__main__":
     model = joblib.load(args.model_fl)
 
     stream = KmerCountStreamer(args.kmer_counts_fl,
-                               gzipped=True)
+                               gzipped=True,
+                               sample_names=(args.sample_name,))
     stream = CountScaler(stream, "binary")
     stream = ObservedFeatureFilter(stream, model["feature_filter"])
     stream = DictionarySampleIndexerTrainer(stream)
