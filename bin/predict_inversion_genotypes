@@ -63,15 +63,12 @@ if __name__ == "__main__":
     stream = ObservedFeatureFilter(stream, model["feature_filter"])
     stream = DictionarySampleIndexerTrainer(stream)
     stream = HashingIndexer(stream, model["num_dimensions"])
-    accumulator = MatrixAccumulator(stream)
+    accumulator = MatrixAccumulator(stream, model["num_dimensions"])
     consumer = TerminalConsumer(accumulator)
 
     consumer.run()
 
-    feature_matrix = accumulator.create_feature_matrix().toarray()
-    feature_matrix = np.resize(feature_matrix,
-                               (feature_matrix.shape[0],
-                                model["num_dimensions"]))
+    feature_matrix = accumulator.create_feature_matrix()
     sample_names = accumulator.get_sample_names()
 
     feature_matrix = np.log1p(feature_matrix)

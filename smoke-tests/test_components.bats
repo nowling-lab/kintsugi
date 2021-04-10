@@ -68,7 +68,8 @@ setup() {
     run predict_inversion_genotypes \
 	--model-fl ${TEST_TEMP_DIR}/model.pkl \
 	--predictions-fl ${TEST_TEMP_DIR}/sample_0_predictions.tsv \
-	--kmer-counts-fl ${TEST_TEMP_DIR}/simulation/kmer_counts/sample_0_kmer_counts.tsv.gz
+	--kmer-counts-fl ${TEST_TEMP_DIR}/simulation/kmer_counts/sample_0_kmer_counts.tsv.gz \
+	--sample-name sample_0
 
     [ "$status" -eq 0 ]
     [ -e ${TEST_TEMP_DIR}/sample_0_predictions.tsv ]

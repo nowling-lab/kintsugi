@@ -66,8 +66,7 @@ if __name__ == "__main__":
     unique_features = 0
     for model_flname in args.features_fls:
         model = joblib.load(model_flname)
-        features += np.resize(model["feature_matrix"],
-                              (n_samples, args.num_dimensions))
+        features += model["feature_matrix"]
 
         if args.num_dimensions != model["num_dimensions"]:
             raise Exception("Number of partition features ({}) does not match expected value ({})".format(model["num_dimensions"], args.num_dimensions))

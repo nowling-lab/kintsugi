@@ -109,13 +109,14 @@ if __name__ == "__main__":
     feature_indexer = HashingIndexer(sample_indexer,
                                      args.num_dimensions)
 
-    stream = MatrixAccumulator(feature_indexer)
+    stream = MatrixAccumulator(feature_indexer,
+                               args.num_dimensions)
 
     consumer = TerminalConsumer(stream)
 
     consumer.run()
 
-    feature_matrix = stream.create_feature_matrix().toarray()
+    feature_matrix = stream.create_feature_matrix()
 
     model = { "feature_matrix" : feature_matrix,
               "num_dimensions" : args.num_dimensions,
