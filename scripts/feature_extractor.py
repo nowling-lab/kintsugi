@@ -7,6 +7,9 @@ from joblib import load
 from pybloom import BloomFilter
 import scipy.sparse as sp
 from sklearn.feature_extraction import FeatureHasher
+from sklearn.preprocessing import Binarizer
+import numpy as np
+
 
 def load_rand_proj(flname):
     return load(flname)
@@ -30,10 +33,6 @@ def filter_passlist(kmers, passlist):
         if kmer in passlist:
             yield t
 
-def to_binary(kmers):
-    for processed, kmer, count in kmers:
-        yield processed, kmer, 1
-
 def progress(kmers):
     next_output = 1
     for processed, kmer, count in kmers:
@@ -42,23 +41,28 @@ def progress(kmers):
             next_output *= 2
         yield processed, kmer, count
 
-def get_counts(kmers):
+def get_counts(kmers, count_scaling):
     for processed, kmer, count in kmers:
-        yield kmer, count
+        if count_scaling == 'counts':
+            yield kmer, count
+        elif count_scaling == 'binary'
+            yield kmer, 1
+        else: 
+            yield kmer, np.log1p(count) 
         
 def hash_features(kmers, n_features):
     extractor = FeatureHasher(n_features = n_features,
                               input_type = "pair",
                               non_negative=True)
-    features = extractor.transform([kmers])
-
+    features = extractor.transform([kmers]).toarray()
     return features
         
 def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--rand-proj-fl",
-                        type=str)
+                        type=str,
+                        required=False)
 
     parser.add_argument("--feature-matrix",
                         type=str,
@@ -81,35 +85,35 @@ def parse_args():
                         default=20,
                         help="Number of hashed features in base 2")
 
-    return parser.parse_args()
+    parser.add_argument('--feature-scaling-before', choices=['binary', 'counts', 'log1p'], required=True)
+   
+    parser.add_argument('--feature-scaling-after', choices=['binary', 'counts', 'log1p'], required=True)
+  
+  return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
 
     print "Opening kmer file"
     kmers = read_kmers(args.kmer_freq_fl)
-
-    if args.passlist_bf:
-        print "Reading passlist bloomfilter"
-        passlist = load_bloomfilter(args.passlist_bf)
-        kmers = filter_passlist(kmers, passlist)
-
-    if args.binary:
-        print "Using binary features"
-        kmers = to_binary(kmers)
-
-    #kmers = progress(kmers)
-    kmers = get_counts(kmers)
+  
+    kmers = progress(kmers)
+    kmers = get_counts(kmers, args.feature_scaling_before)
 
     n_features = 2 ** args.n_features
     features = hash_features(kmers, n_features=n_features)
+     
+    if args.feature_scaling_after == "binary":
+        print("Using binary features after")
+        features = Binarizer().fit_transform(features)
+
+    elif args.feature_scaling_after == "log1p":
+        print("Using log1p features after")
+        features = np.log1p(features)
+    else:
+        print("Usng counts features after")
+
 
     print "Done with feature extraction"
     
-    if args.rand_proj_fl:
-        print "Loading random projection"
-        srp = load_rand_proj(args.rand_proj_fl)
-        features = srp.transform(features)
-
     print "Saving feature matrix"
-    dump(features, args.feature_matrix)
