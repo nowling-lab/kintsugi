@@ -6,7 +6,6 @@ from joblib import load
 import numpy as np
 import scipy.sparse as sp
 from sklearn.decomposition import PCA
-
 import matplotlib
 matplotlib.use("PDF")
 import matplotlib.pyplot as plt
@@ -44,8 +43,9 @@ def parse_args():
     return parser.parse_args()
 
 if __name__ == "__main__":
+    
     args = parse_args()
-
+   
     groups = read_groups(args.groups_fl)
 
     matrices = []
@@ -57,7 +57,8 @@ if __name__ == "__main__":
                 matrices.append(matrix)
                 labels.append(group_name)
 
-    feature_matrix = sp.vstack(matrices).toarray()
+    #feature_matrix = sp.vstack(matrices).toarray()
+    feature_matrix = np.vstack(matrices)
 
     pca = PCA(n_components = 6, whiten=True)
     proj = pca.fit_transform(feature_matrix)
