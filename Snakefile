@@ -53,6 +53,7 @@ rule dump_kmers:
 rule extract_features:
     input:
         kmer_counts="data/kmer_counts/{sample}.counts",
+ 
     params:
         n_features=config["n_features"],
         use_binary=config["use_binary_features"]
@@ -71,7 +72,7 @@ rule log1p_binary_feature:
     params:
         n_features=config["n_features"]
     output:
-        feature_matrix="data/log1p_feature_before/{sample}.features"
+        feature_matrix="data/log1p_features_before_after/{sample}.features"
     threads:
         4
     shell:
@@ -83,11 +84,11 @@ rule log1p_count_feature:
     params:
         n_features=config["n_features"]
     output:
-        feature_matrix="data/log1p_feature_before/{sample}.features"
+       feature_matrix="data/log1p_features_count/{sample}.features"
     threads:
         4
     shell:
-        "scripts/feature_extractor.py --kmer-freq-fl {input.kmer_counts} --n-features {params.n_features} --feature-matrix {output.feature_matrix} --feature-scaling-before log1p --feature-scaling-after count"
+        "scripts/feature_extractor.py --kmer-freq-fl {input.kmer_counts} --n-features {params.n_features} --feature-matrix {output.feature_matrix} --feature-scaling-before log1p --feature-scaling-after counts"
 
 rule log1p_log1p_feature:
     input: 
@@ -95,28 +96,14 @@ rule log1p_log1p_feature:
     params:
         n_features=config["n_features"]
     output:
-        feature_matrix="data/log1p_feature_before/{sample}.features"
+        feature_matrix="data/log1p_features_log1p/{sample}.features"
     threads:
         4
     shell:
         "scripts/feature_extractor.py --kmer-freq-fl {input.kmer_counts} --n-features {params.n_features} --feature-matrix {output.feature_matrix} --feature-scaling-before log1p --feature-scaling-after log1p"
 
-rule pca_log1p:
-    input:
-       feature_matrices=expand("data/log1p_features/{sample}.features", 
-			                        	sample=config["samples"])
-    params:
-       groups_fl=config["groups_fl"]
-    ou'/tput:
-       plot="data/pca/pca_log1p.png"
-    threads:
-       2
-    shell:
-        "scripts/pca.py --feature-matrices {input.feature_matrices} --groups-fl {params.groups_fl} --plot-fl {output.plot}"
-
 
 #Binarizer feature scaling combinations w/PCA
-
 
 rule binarizer_binary_feature:
     input:
@@ -124,23 +111,23 @@ rule binarizer_binary_feature:
     params:
         n_features=config["n_features"]
     output:
-        feature_matrix="data/binarizer_features/{sample}.features"
+        feature_matrix="data/binarizer_features_binary/{sample}.features"
     threads:
         2
     shell:
-        "scripts/feature_extractor.py --kmer-freq-fl {input.kmer_counts} --n-features {params.n_features} --feature-matrix {output.feature_matrix} --feature-saling-before binary --binary --feature-scaling-after binary"
- 
+        "scripts/feature_extractor.py --kmer-freq-fl {input.kmer_counts} --n-features {params.n_features} --feature-matrix {output.feature_matrix} --feature-scaling-before binary --feature-scaling-after binary"
+
 rule binarizer_count_feature:
     input:
         kmer_counts="data/kmer_counts/{sample}.counts",
     params:
         n_features=config["n_features"]
     output:
-        feature_matrix="data/binarizer_features/{sample}.features"
+        feature_matrix="data/binarizer_features_count/{sample}.features"
     threads:
         2
     shell:
-        "scripts/feature_extractor.py --kmer-freq-fl {input.kmer_counts} --n-features {params.n_features} --feature-matrix {output.feature_matrix} --feature-saling-before binary --binary --feature-scaling-after count"
+        "scripts/feature_extractor.py --kmer-freq-fl {input.kmer_counts} --n-features {params.n_features} --feature-matrix {output.feature_matrix} --feature-scaling-before binary --feature-scaling-after counts"
  
 rule binarizer_log1p_feature:
     input:
@@ -148,11 +135,11 @@ rule binarizer_log1p_feature:
     params:
         n_features=config["n_features"]
     output:
-        feature_matrix="data/binarizer_features/{sample}.features"
+        feature_matrix="data/binarizer_features_log1p/{sample}.features"
     threads:
         2
     shell:
-        "scripts/feature_extractor.py --kmer-freq-fl {input.kmer_counts} --n-features {params.n_features} --feature-matrix {output.feature_matrix} --feature-saling-before binary --binary --feature-scaling-after log1p"
+        "scripts/feature_extractor.py --kmer-freq-fl {input.kmer_counts} --n-features {params.n_features} --feature-matrix {output.feature_matrix} --feature-scaling-before binary --feature-scaling-after log1p"
 
 # Counts feature combination w/PCA
 
@@ -162,7 +149,7 @@ rule counts_count_feature:
     params:
         n_features=config["n_features"]
     output:
-        feature_matrix="data/count_features/{sample}.features"
+        feature_matrix="data/count_features_counts/{sample}.features"
     threads:
         2
     shell:
@@ -174,7 +161,7 @@ rule counts_log1p_feature:
     params:
         n_features=config["n_features"]
     output:
-        feature_matrix="data/count_features/{sample}.features"
+        feature_matrix="data/count_features_log1p/{sample}.features"
     threads:
         2
     shell:
@@ -182,97 +169,136 @@ rule counts_log1p_feature:
 
 
 rule counts_binary_feature:
-input:
-    kmer_counts="data/kmer_counts/{sample}.counts",
-params:
-    n_features=config["n_features"]
-output:
-    feature_matrix="data/count_features/{sample}.features"
-threads:
-    2
-shell:
-    "scripts/feature_extractor.py --kmer-freq-fl {input.kmer_counts} --n-features {params.n_features} --feature-matrix {output.feature_matrix} --feature-scaling-before counts --feature-scaling-afterbinary"
-
-
-#This is pca rules for binary/no binary
-
-rule pca_binary:
     input:
-        feature_matrices=expand("data/binary_features/{sample}.features",
-                               sample=config["samples"])
+        kmer_counts="data/kmer_counts/{sample}.counts",
     params:
-        groups_fl=config["groups_fl"]
+        n_features=config["n_features"]
     output:
-        plot="data/pca/pca_binary.png"
+        feature_matrix="data/count_features_binary/{sample}.features"
     threads:
         2
     shell:
-        "scripts/pca.py --feature-matrices {input.feature_matrices} --groups-fl {params.groups_fl} --plot-fl {output.plot}"
+        "scripts/feature_extractor.py --kmer-freq-fl {input.kmer_counts} --n-features {params.n_features} --feature-matrix {output.feature_matrix} --feature-scaling-before counts --feature-scaling-after binary"
 
-rule pca:
+
+rule pca_log1p_before:
     input:
-        feature_matrices=expand("data/feature_extraction/{sample}.features",
+        feature_matrices=expand("data/log1p_features_before_after/{sample}.features",
                                 sample=config["samples"])
     params:
         groups_fl=config["groups_fl"]
     output:
-        plot="data/pca/pca_1_2.png"
+        plot="data/pca/pca_before.png"
     threads:
-        2
+        4
     shell:
         "scripts/pca.py --feature-matrices {input.feature_matrices} --groups-fl {params.groups_fl} --plot-fl {output.plot}"
 
-rule pca_log1p:
+rule pca_log1p_count:
     input:
-       feature_matrices=expand("data/log1p_features/{sample}.features", 
-			                        	sample=config["samples"])
-    params:
-       groups_fl=config["groups_fl"]
-    output:
-       plot="data/pca/pca_log1p.png"
-    threads:
-       2
-    shell:
-        "scripts/pca.py --feature-matrices {input.feature_matrices} --groups-fl {params.groups_fl} --plot-fl {output.plot}"
-
-rule pca_binarizer:
-    input:
-        feature_matrices=expand("data/binarizer_features/{sample}.features",
-                                 sample=config["samples"])
+        feature_matrices=expand("data/log1p_features_count/{sample}.features",
+                            sample=config["samples"])
     params:
         groups_fl=config["groups_fl"]
     output:
-        plot="data/pca/pca_binarizer.png"
+        plot="data/pca/pca_log1p_count.png"
     threads:
-        2
+        4
     shell:
         "scripts/pca.py --feature-matrices {input.feature_matrices} --groups-fl {params.groups_fl} --plot-fl {output.plot}"
 
-rule pca_log1p_no_count:
+rule pca_log1p_log1p:
     input:
-       feature_matrices=expand("data/log1p_no_counts/{sample}.features", 
-				                        sample=config["samples"])
-    params:
-       groups_fl=config["groups_fl"]
-    output:
-       plot="data/pca/pca_log1p_no_count.png"
-    threads:
-       2
-    shell:
-        "scripts/pca.py --feature-matrices {input.feature_matrices} --groups-fl {params.groups_fl} --plot-fl {output.plot}"
-
-rule pca_binarizer_no_count:
-    input:
-        feature_matrices=expand("data/binarizer_no_counts/{sample}.features",
-                                 sample=config["samples"])
+       feature_matrices=expand("data/log1p_features_log1p/{sample}.features",
+                            sample=config["samples"])
     params:
         groups_fl=config["groups_fl"]
     output:
-        plot="data/pca/pca_binarizer_no_counts.png"
+        plot="data/pca/pca_log1p_log1p.png"
     threads:
-        2
+        4
     shell:
         "scripts/pca.py --feature-matrices {input.feature_matrices} --groups-fl {params.groups_fl} --plot-fl {output.plot}"
+
+rule pca_binarizer_binary:
+    input:
+        feature_matrices=expand("data/binarizer_features_binary/{sample}.features",
+                            sample=config["samples"])
+    params:
+        groups_fl=config["groups_fl"]
+    output:
+        plot="data/pca/pca_binary_binarizer.png"
+    threads:
+        4
+    shell:
+        "scripts/pca.py --feature-matrices {input.feature_matrices} --groups-fl {params.groups_fl} --plot-fl {output.plot}"
+
+rule pca_binarizer_log1p:
+    input:
+        feature_matrices=expand("data/binarizer_features_log1p/{sample}.features",
+                            sample=config["samples"])
+    params:
+        groups_fl=config["groups_fl"]
+    output:
+        plot="data/pca/pca_binarizer_log1p.png"
+    threads:
+        4
+    shell:
+        "scripts/pca.py --feature-matrices {input.feature_matrices} --groups-fl {params.groups_fl} --plot-fl {output.plot}"
+
+rule pca_binarizer_count:
+    input:
+        feature_matrices=expand("data/binarizer_features_count/{sample}.features",
+                            sample=config["samples"])
+    params:
+        groups_fl=config["groups_fl"]
+    output:
+        plot="data/pca/pca_binarizer_count.png"
+    threads:
+        4
+    shell:
+        "scripts/pca.py --feature-matrices {input.feature_matrices} --groups-fl {params.groups_fl} --plot-fl {output.plot}"
+
+rule pca_count_count:
+    input:
+        feature_matrices=expand("data/count_features_counts/{sample}.features",
+                            sample=config["samples"])
+    params:
+        groups_fl=config["groups_fl"]
+    output:
+        plot="data/pca/pca_count_count.png"
+    threads:
+        4
+    shell:
+        "scripts/pca.py --feature-matrices {input.feature_matrices} --groups-fl {params.groups_fl} --plot-fl {output.plot}"
+
+rule pca_count_log1p:
+    input:
+        feature_matrices=expand("data/count_features_log1p/{sample}.features",
+                            sample=config["samples"])
+    params:
+        groups_fl=config["groups_fl"]
+    output:
+        plot="data/pca/pca_count_log1p.png"
+    threads:
+        4
+    shell:
+        "scripts/pca.py --feature-matrices {input.feature_matrices} --groups-fl {params.groups_fl} --plot-fl {output.plot}"
+
+rule pca_count_binary:
+    input:
+        feature_matrices=expand("data/count_features_binary/{sample}.features",
+                            sample=config["samples"])
+    params:
+        groups_fl=config["groups_fl"]
+    output:
+        plot="data/pca/pca_count_binarizer.png"
+    threads:
+        4
+    shell:
+        "scripts/pca.py --feature-matrices {input.feature_matrices} --groups-fl {params.groups_fl} --plot-fl {output.plot}"
+
+
 
 
 # top-level rules
