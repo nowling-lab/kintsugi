@@ -45,7 +45,7 @@ def get_counts(kmers, count_scaling):
     for processed, kmer, count in kmers:
         if count_scaling == 'counts':
             yield kmer, count
-        elif count_scaling == 'binary'
+        elif count_scaling == 'binary':
             yield kmer, 1
         else: 
             yield kmer, np.log1p(count) 
@@ -89,7 +89,7 @@ def parse_args():
    
     parser.add_argument('--feature-scaling-after', choices=['binary', 'counts', 'log1p'], required=True)
   
-  return parser.parse_args()
+    return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
@@ -112,8 +112,5 @@ if __name__ == "__main__":
         features = np.log1p(features)
     else:
         print("Usng counts features after")
-
-
-    print "Done with feature extraction"
     
-    print "Saving feature matrix"
+    dump(features, args.feature_matrix)
