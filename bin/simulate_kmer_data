@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+
+"""
+Copyright 2021 Ronald J. Nowling
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+import argparse
+from collections import defaultdict
+import gzip
+import itertools
+import math
+import os
+import random
+import sys
+
+MEAN_COUNT = 10.0
+
+def kmer_generator(kmer_length):
+    """
+    Generators k-mers of the desired length in sorted order
+    """
+    kmer = ["A"] * kmer_length
+    
+    while True:
+        yield "".join(kmer)
+        
+        index = len(kmer) - 1
+        rollover = True
+        while rollover and index >= 0:
+            if kmer[index] == "A":
+                kmer[index] = "C"
+                rollover = False
+            elif kmer[index] == "C":
+                kmer[index] = "G"
+                rollover = False
+            elif kmer[index] == "G":
+                kmer[index] = "T"
+                rollover = False
+            else:
+                kmer[index] = "A"
+                rollover = True
+                index -= 1
+        
+def write_sample_labels(flname, groups):
+    with open(flname, "w") as fl:
+        for name, samples in groups.items():
+            fl.write(name)
+            fl.write(",")
+            fl.write(",".join(samples))
+            fl.write("\n")
+            
+def sample_poisson(lambda_):
+    x = 0
+    p = math.exp(-lambda_)
+    s = p
+    u = random.random()
+    
+    while u > s:
+        x += 1
+        p *= lambda_ / x
+        s += p
+        
+    return x 
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--n-samples",
+                        type=int,
+                        required=True)
+
+    parser.add_argument("--n-unique-kmers",
+                        type=int,
+                        required=True)
+
+    parser.add_argument("--kmer-length",
+                        type=int,
+                        required=True)
+
+    parser.add_argument("--fraction-associated-kmers",
+                        type=float,
+                        required=True)
+
+    parser.add_argument("--simulation-dir",
+                        type=str,
+                        required=True)
+
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_args()
+    
+    sample_labels = []
+    groups = defaultdict(list)
+    sample_names = []
+    for i in range(args.n_samples):
+        if random.random() < 0.5:
+            sample_labels.append(0)
+            name = "sample_{}".format(i)
+            groups["0"].append(name)
+            sample_names.append(name)
+        else:
+            sample_labels.append(1)
+            name = "sample_{}".format(i)
+            groups["1"].append(name)
+            sample_names.append(name)
+
+    if not os.path.exists(args.simulation_dir):
+        os.makedirs(args.simulation_dir)
+        
+    labels_path = os.path.join(args.simulation_dir, "phenotypes.labels")
+    write_sample_labels(labels_path, groups)
+
+    count_dir = os.path.join(args.simulation_dir, "kmer_counts")
+    if not os.path.exists(count_dir):
+        os.makedirs(count_dir)
+
+    data_labels_path = os.path.join(args.simulation_dir, "data_labels_paths.tsv")
+    with open(data_labels_path, "w") as fl:
+        for name, label in zip(sample_names, sample_labels):
+            data_path = os.path.join("kmer_counts", name + "_kmer_counts.tsv.gz")
+            fl.write("{}\t{}\t{}\n".format(name, label, data_path))
+
+    data_files_path = os.path.join(args.simulation_dir, "data_paths.tsv")
+    with open(data_files_path, "w") as fl:
+        for name, label in zip(sample_names, sample_labels):
+            data_path = os.path.join("kmer_counts", name + "_kmer_counts.tsv.gz")
+            fl.write("{}\t{}\n".format(name, data_path))
+
+    sample_count_files = []
+    for sample_name in sample_names:
+        fl = gzip.open(os.path.join(count_dir, sample_name + "_kmer_counts.tsv.gz"), "wt")
+        sample_count_files.append(fl)
+        
+    kmer_stream = kmer_generator(args.kmer_length)
+    for kmer in itertools.islice(kmer_stream, args.n_unique_kmers):
+        associated = random.random() < args.fraction_associated_kmers
+        for sample_label, fl in zip(sample_labels, sample_count_files):
+            if associated and sample_label == "1":
+                count = sample_poisson(MEAN_COUNT)
+                fl.write("{}\t{}\n".format(kmer, count))
+            elif not associated and random.random() < 0.1:
+                count = sample_poisson(MEAN_COUNT)
+                fl.write("{}\t{}\n".format(kmer, count))
+
+    for fl in sample_count_files:
+        fl.close()
+            
+    

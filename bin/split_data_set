@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+
+"""
+Copyright 2021 Ronald J. Nowling
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+import argparse
+import random
+
+import numpy as np
+
+def read_sample_labels(flname):
+    groups = dict()
+    with open(flname) as fl:
+        for ln in fl:
+            cols = ln.strip().split(",")
+            groups[cols[0]] = cols[1:]
+    return groups
+
+def write_sample_labels(flname, groups):
+    with open(flname, "w") as fl:
+        for name, samples in groups.items():
+            fl.write(name)
+            fl.write(",")
+            fl.write(",".join(samples))
+            fl.write("\n")
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--input-labels",
+                        type=str,
+                        required=True)
+
+    parser.add_argument("--group1-labels",
+                        type=str,
+                        required=True)
+
+    parser.add_argument("--group2-labels",
+                        type=str,
+                        required=True)
+
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_args()
+
+    sample_labels = read_sample_labels(args.input_labels)
+
+    group1_labels = dict()
+    group2_labels = dict()
+
+    for group_name, samples in sample_labels.items():
+        group1 = []
+        group2 = []
+        for sample in samples:
+            if random.random() < 0.5:
+                group1.append(sample)
+            else:
+                group2.append(sample)
+
+        group1_labels[group_name] = group1
+        group2_labels[group_name] = group2
+
+    write_sample_labels(args.group1_labels, group1_labels)
+    write_sample_labels(args.group2_labels, group2_labels)

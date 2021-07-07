@@ -1,0 +1,126 @@
+#!/usr/bin/env python
+"""
+Copyright 2021 Ronald J. Nowling
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+import argparse
+import logging
+
+import joblib
+import numpy as np
+
+from trashcompactor._base import TerminalConsumer
+from trashcompactor.inputs import KmerCountStreamer
+from trashcompactor.accumulators import MatrixAccumulator
+from trashcompactor.outputs import KmerCountOutput
+from trashcompactor.transformers.feature_filters import ObservedFeatureFilterTrainer
+from trashcompactor.transformers.feature_filters import AssociationTestingFilter
+from trashcompactor.transformers.feature_indexing import HashingIndexer
+from trashcompactor.transformers.feature_scaling import CountScaler
+from trashcompactor.transformers.sample_indexing import DictionarySampleIndexer
+
+def read_labels(flname):
+    sample_labels = dict()
+    with open(flname) as fl:
+        for ln in fl:
+            cols = ln.strip().split(",")
+            pop = cols[0]
+
+            for sample_name in cols[1:]:
+                sample_labels[sample_name] = pop
+
+    return sample_labels
+
+def index_samples(sample_names):
+    sample_indices = dict()
+    for i, name in enumerate(sorted(list(sample_names))):
+        sample_indices[name] = i
+
+    return sample_indices
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--kmer-count-fl",
+                        type=str,
+                        required=True)
+
+    parser.add_argument("--num-dimensions",
+                        type=int,
+                        required=True)
+                        
+    parser.add_argument("--sig-threshold",
+                        type=float,
+                        required=True)
+                        
+    parser.add_argument("--labels-fl",
+                        type=str,
+                        required=True)
+
+    parser.add_argument("--features-fl",
+                        type=str,
+                        required=True)
+                        
+    parser.add_argument("--sig-kmer-output-fl",
+                        type=str)
+
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    logging.basicConfig(level=0)
+    args = parse_args()
+    
+    labels = read_labels(args.labels_fl)
+    sample_indices = index_samples(labels.keys())
+
+    stream = KmerCountStreamer(args.kmer_count_fl,
+                               gzipped=True)
+
+    stream = AssociationTestingFilter(stream,
+                                      labels,
+                                      args.sig_threshold)
+                                      
+    if args.sig_kmer_output_fl != None:
+        gzipped = args.sig_kmer_output_fl.endswith(".gz")
+        stream = KmerCountOutput(stream,
+                                 args.sig_kmer_output_fl,
+                                 gzipped=gzipped)
+
+    stream = CountScaler(stream,
+                         "binary")
+
+    observed_features = ObservedFeatureFilterTrainer(stream)
+
+    sample_indexer = DictionarySampleIndexer(observed_features,
+                                             sample_indices)
+
+    feature_indexer = HashingIndexer(sample_indexer,
+                                     args.num_dimensions)
+
+    stream = MatrixAccumulator(feature_indexer,
+                               args.num_dimensions)
+
+    consumer = TerminalConsumer(stream)
+
+    consumer.run()
+
+    feature_matrix = stream.create_feature_matrix()
+
+    model = { "feature_matrix" : feature_matrix,
+              "num_dimensions" : args.num_dimensions,
+              "feature_filter" : observed_features.filter_,
+              "sample_names" : stream.get_sample_names() }
+
+    joblib.dump(model, args.features_fl)

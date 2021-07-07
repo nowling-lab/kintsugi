@@ -1,0 +1,265 @@
+#!/usr/bin/env python
+"""
+Copyright 2021 Ronald J. Nowling
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+import argparse
+from collections import defaultdict
+import os
+import shutil
+import sys
+
+import joblib
+import snakemake
+import yaml
+
+import kintsugi
+
+def read_data_description(flname):
+    """
+    Reads a three-column, tab-separated file of sample names,
+    labels, and paths.  Returns a pair of dicts.  The first
+    dict has sample names as keys and paths as values. The
+    second dict has class labels as keys and sets of sample
+    names as values.
+    """
+    sample_paths = {}
+    sample_groups = defaultdict(set)
+    with open(flname) as fl:
+        for ln in fl:
+            cols = ln.split()
+            sample_name = cols[0]
+            group = cols[1]
+            sample_path = cols[2]
+            if not os.path.isabs(sample_path):
+                basedir = os.path.dirname(os.path.realpath(flname))
+                sample_path = os.path.join(basedir,
+                                           sample_path)
+            sample_path = os.path.normpath(sample_path)
+            sample_paths[sample_name] = sample_path
+            sample_groups[group].add(sample_name)
+
+    return sample_paths, sample_groups
+
+def read_data_paths(flname):
+    """
+    Reads a two-column, tab-separated file of sample names
+    and paths.  Returns a dict with sample names as keys and
+    paths as values.
+    """
+    sample_paths = {}
+    with open(flname) as fl:
+        for ln in fl:
+            cols = ln.split()
+            sample_name = cols[0]
+            sample_path = cols[1]
+            if not os.path.isabs(sample_path):
+                basedir = os.path.dirname(os.path.realpath(flname))
+                sample_path = os.path.join(basedir,
+                                           sample_path)
+            sample_path = os.path.normpath(sample_path)
+            sample_paths[sample_name] = sample_path
+
+    return sample_paths
+
+def write_sample_labels(flname, groups):
+    with open(flname, "w") as fl:
+        for name, samples in groups.items():
+            fl.write(name)
+            fl.write(",")
+            fl.write(",".join(samples))
+            fl.write("\n")
+
+def train_model(data_description_fl, workdir, n_cores, config, model_output_fl=None):
+    sample_paths, sample_groups = read_data_description(data_description_fl)
+
+    if not os.path.exists(workdir):
+        os.makedirs(workdir)
+
+    sample_labels_path = os.path.join(workdir,
+                                      "labels")
+    write_sample_labels(sample_labels_path, sample_groups)
+    
+    config["sample_data_paths"] = sample_paths
+    config["labels_fl"] = "labels"
+
+
+    config_path = os.path.join(workdir,
+                               "config.yaml")
+
+    with open(config_path, "w") as fl:
+        yaml.dump(config, fl)
+
+    snakefile = os.path.join(os.path.dirname(kintsugi.__file__),
+                             "snakefiles",
+                             "train.smk")
+
+    successful_execution = snakemake.snakemake(snakefile,
+                                               printshellcmds=True,
+                                               targets=["run_experiments"],
+                                               cores=n_cores,
+                                               workdir=workdir)
+                                 
+    if successful_execution and model_output_fl:
+        model_src = os.path.join(workdir, "data/model.pkl")
+        shutil.copy2(model_src, model_output_fl)
+
+    return successful_execution
+        
+def apply_model(data_paths_fl, workdir, model_path, n_cores, predictions_output_fl):
+    sample_paths = read_data_paths(data_paths_fl)
+
+    if not os.path.exists(workdir):
+        os.makedirs(workdir)
+
+    model_path = os.path.normpath(model_path)
+    if not os.path.isabs(model_path):
+        model_path = os.path.abspath(model_path)
+
+    config = {
+        "sample_data_paths" : sample_paths,
+        "model_fl" : model_path
+        }
+
+    config_path = os.path.join(workdir,
+                               "config.yaml")
+
+    print(config)
+
+    with open(config_path, "w") as fl:
+        yaml.dump(config, fl)
+
+    snakefile = os.path.join(os.path.dirname(kintsugi.__file__),
+                             "snakefiles",
+                             "apply_model.smk")
+
+    successful_execution = snakemake.snakemake(snakefile,
+                                               printshellcmds=True,
+                                               targets=["run_experiments"],
+                                               cores=n_cores,
+                                               workdir=workdir)
+                                 
+    if successful_execution and predictions_output_fl:
+        model_src = os.path.join(workdir, "data/all_predictions.tsv")
+        shutil.copy2(model_src, predictions_output_fl)
+
+    return successful_execution
+        
+def print_model_details(model_fl):
+    model = joblib.load(args.model_fl)
+    
+    print("Classes:", model["label_encoder"].classes_)
+    print("Model type:", model["model_type"])
+    print("Number of dimensions:", model["num_dimensions"])
+    print("Number of unique features:", model["unique_features"])
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    subparsers = parser.add_subparsers(dest="mode", required=True)
+
+    train_parser = subparsers.add_parser("train",
+                                         help="Train a model")
+
+    train_parser.add_argument("--num-dimensions",
+                              type=int,
+                              required=True)
+
+    train_parser.add_argument("--sig-threshold",
+                              type=float,
+                              required=True)
+
+    train_parser.add_argument("--n-partitions",
+                              type=int,
+                              required=True)
+
+    train_parser.add_argument("--n-cores",
+                              type=int,
+                              required=True)
+    
+    train_parser.add_argument("--data-description-fl",
+                              type=str,
+                              required=True)
+
+    train_parser.add_argument("--workdir",
+                              type=str,
+                              required=True)
+                              
+    train_parser.add_argument("--model-output-fl",
+                              type=str)
+    
+    inspect_parser = subparsers.add_parser("inspect-model")
+    
+    inspect_parser.add_argument("--model-fl",
+                                type=str,
+                                required=True)
+
+    apply_parser = subparsers.add_parser("apply-model")
+
+    apply_parser.add_argument("--data-paths-fl",
+                              type=str,
+                              required=True)
+
+    apply_parser.add_argument("--model-fl",
+                              type=str,
+                              required=True)
+    
+    apply_parser.add_argument("--workdir",
+                              type=str,
+                              required=True)
+                              
+    apply_parser.add_argument("--predictions-output-fl",
+                              type=str,
+                              required=True)
+
+    apply_parser.add_argument("--n-cores",
+                              type=int,
+                              required=True)
+
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_args()
+
+    if args.mode == "train":
+        config = { "n_features" : args.num_dimensions,
+                   "sig_threshold" : args.sig_threshold,
+                   "n_partitions" : args.n_partitions,
+                   "output_sig_kmers" : True }
+                   
+        success = train_model(args.data_description_fl,
+                              args.workdir,
+                              args.n_cores,
+                              config,
+                              model_output_fl=args.model_output_fl)
+
+        if not success:
+            sys.exit(1)
+            
+    elif args.mode == "inspect-model":
+        print_model_details(args.model_fl)
+
+    elif args.mode == "apply-model":
+        success = apply_model(args.data_paths_fl,
+                              args.workdir,
+                              args.model_fl,
+                              args.n_cores,
+                              args.predictions_output_fl)
+
+        if not success:
+            sys.exit(1)
+    else:
+        raise Exception("Unknown command '{}'".format(args.mdoe))
+            
