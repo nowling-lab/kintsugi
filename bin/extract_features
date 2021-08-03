@@ -27,6 +27,7 @@ from trashcompactor.accumulators import MatrixAccumulator
 from trashcompactor.outputs import KmerCountOutput
 from trashcompactor.transformers.feature_filters import ObservedFeatureFilterTrainer
 from trashcompactor.transformers.feature_filters import AssociationTestingFilter
+from trashcompactor.transformers.feature_filters import RandomFeatureFilter
 from trashcompactor.transformers.feature_indexing import HashingIndexer
 from trashcompactor.transformers.feature_scaling import CountScaler
 from trashcompactor.transformers.sample_indexing import DictionarySampleIndexer
@@ -72,6 +73,9 @@ def parse_args():
     parser.add_argument("--features-fl",
                         type=str,
                         required=True)
+
+    parser.add_argument("--random-feature-sampling-prob",
+                        type=float)
                         
     parser.add_argument("--sig-kmer-output-fl",
                         type=str)
@@ -91,6 +95,10 @@ if __name__ == "__main__":
     stream = AssociationTestingFilter(stream,
                                       labels,
                                       args.sig_threshold)
+
+    if args.random_feature_sampling_prob:
+        stream = RandomFeatureFilter(stream,
+                                     args.random_feature_sampling_prob)
                                       
     if args.sig_kmer_output_fl != None:
         gzipped = args.sig_kmer_output_fl.endswith(".gz")
