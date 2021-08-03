@@ -181,6 +181,9 @@ def parse_args():
                               type=float,
                               required=True)
 
+    train_parser.add_argument("--random-feature-sampling-prob",
+                              type=float)
+
     train_parser.add_argument("--n-partitions",
                               type=int,
                               required=True)
@@ -199,6 +202,14 @@ def parse_args():
                               
     train_parser.add_argument("--model-output-fl",
                               type=str)
+
+    train_parser.add_argument("--model-type",
+                              type=str,
+                              default="lr",
+                              choices=["lr",
+                                       "knn",
+                                       "svm",
+                                       "rf"])
     
     inspect_parser = subparsers.add_parser("inspect-model")
     
@@ -237,7 +248,9 @@ if __name__ == "__main__":
         config = { "n_features" : args.num_dimensions,
                    "sig_threshold" : args.sig_threshold,
                    "n_partitions" : args.n_partitions,
-                   "output_sig_kmers" : True }
+                   "output_sig_kmers" : True,
+                   "model_type" : args.model_type,
+                   "random_feature_sampling_prob" : args.random_feature_sampling_prob }
                    
         success = train_model(args.data_description_fl,
                               args.workdir,

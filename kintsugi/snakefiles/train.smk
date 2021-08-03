@@ -39,13 +39,14 @@ rule extract_features:
     params:
         n_dimensions=config["n_features"],
         sig_threshold=config["sig_threshold"],
-        output_fl=lambda w: "--sig-kmer-output-fl data/significant_kmers/sig_kmers_partition_{}.tsv.gz".format(w.part_num) if config["output_sig_kmers"] else ""
+        output_fl=lambda w: "--sig-kmer-output-fl data/significant_kmers/sig_kmers_partition_{}.tsv.gz".format(w.part_num) if config["output_sig_kmers"] else "",
+        random_sampling=lambda w: "--random-feature-sampling-prob {}".format(config["random_feature_sampling_prob"]) if config["random_feature_sampling_prob"] else ""
     output:
         "data/extracted_features/partition_{part_num}.pkl"
     threads:
         1
     shell:
-        "extract_features --kmer-count-fl {input.partition_fl} --num-dimensions {params.n_dimensions} --sig-threshold {params.sig_threshold} --labels-fl {input.labels_fl} --features-fl {output} {params.output_fl}"
+        "extract_features --kmer-count-fl {input.partition_fl} --num-dimensions {params.n_dimensions} --sig-threshold {params.sig_threshold} --labels-fl {input.labels_fl} --features-fl {output} {params.output_fl} {params.random_sampling}"
 
 rule merge_features:
     input:
@@ -64,12 +65,14 @@ rule train_genotype_classifier:
     input:
         features="data/merged_features.pkl",
         labels_fl=lambda w: config["labels_fl"]
+    params:
+        model_type=config["model_type"]
     output:
         "data/model.pkl"
     threads:
         1
     shell:
-        "train_genotype_classifier --features-fl {input.features} --labels-fl {input.labels_fl} --model-type lr --model-fl {output}"
+        "train_genotype_classifier --features-fl {input.features} --labels-fl {input.labels_fl} --model-type {params.model_type} --model-fl {output}"
         
 rule run_experiments:
     input:
