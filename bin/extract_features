@@ -92,6 +92,9 @@ if __name__ == "__main__":
     stream = KmerCountStreamer(args.kmer_count_fl,
                                gzipped=True)
 
+    stream = CountScaler(stream,
+                         "binary")
+    
     stream = AssociationTestingFilter(stream,
                                       labels,
                                       args.sig_threshold)
@@ -105,9 +108,6 @@ if __name__ == "__main__":
         stream = KmerCountOutput(stream,
                                  args.sig_kmer_output_fl,
                                  gzipped=gzipped)
-
-    stream = CountScaler(stream,
-                         "binary")
 
     observed_features = ObservedFeatureFilterTrainer(stream)
 
