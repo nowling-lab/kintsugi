@@ -22,7 +22,6 @@ import shutil
 import sys
 
 import joblib
-import snakemake
 import yaml
 
 import kintsugi
@@ -82,7 +81,7 @@ def write_sample_labels(flname, groups):
             fl.write(",".join(samples))
             fl.write("\n")
 
-def train_model(data_description_fl, workdir, n_cores, config, model_output_fl=None):
+def train_model(data_description_fl, workdir, config):
     sample_paths, sample_groups = read_data_description(data_description_fl)
 
     if not os.path.exists(workdir):
@@ -102,23 +101,16 @@ def train_model(data_description_fl, workdir, n_cores, config, model_output_fl=N
     with open(config_path, "w") as fl:
         yaml.dump(config, fl)
 
-    snakefile = os.path.join(os.path.dirname(kintsugi.__file__),
-                             "snakefiles",
-                             "train.smk")
+    src_snakefile = os.path.join(os.path.dirname(kintsugi.__file__),
+                                 "snakefiles",
+                                 "train.smk")
 
-    successful_execution = snakemake.snakemake(snakefile,
-                                               printshellcmds=True,
-                                               targets=["run_experiments"],
-                                               cores=n_cores,
-                                               workdir=workdir)
-                                 
-    if successful_execution and model_output_fl:
-        model_src = os.path.join(workdir, "data/model.pkl")
-        shutil.copy2(model_src, model_output_fl)
+    target_snakefile = os.path.join(workdir,
+                                    "Snakefile")
 
-    return successful_execution
-        
-def apply_model(data_paths_fl, workdir, model_path, n_cores, predictions_output_fl):
+    shutil.copy2(src_snakefile, target_snakefile)
+
+def apply_model(data_paths_fl, workdir, model_path):
     sample_paths = read_data_paths(data_paths_fl)
 
     if not os.path.exists(workdir):
@@ -141,29 +133,20 @@ def apply_model(data_paths_fl, workdir, model_path, n_cores, predictions_output_
     with open(config_path, "w") as fl:
         yaml.dump(config, fl)
 
-    snakefile = os.path.join(os.path.dirname(kintsugi.__file__),
-                             "snakefiles",
-                             "apply_model.smk")
+    src_snakefile = os.path.join(os.path.dirname(kintsugi.__file__),
+                                 "snakefiles",
+                                 "apply_model.smk")
 
-    successful_execution = snakemake.snakemake(snakefile,
-                                               printshellcmds=True,
-                                               targets=["run_experiments"],
-                                               cores=n_cores,
-                                               workdir=workdir)
-                                 
-    if successful_execution and predictions_output_fl:
-        model_src = os.path.join(workdir, "data/all_predictions.tsv")
-        shutil.copy2(model_src, predictions_output_fl)
+    target_snakefile = os.path.join(workdir,
+                                    "Snakefile")
 
-    return successful_execution
+    shutil.copy2(src_snakefile, target_snakefile)
         
 def print_model_details(model_fl):
     model = joblib.load(args.model_fl)
     
     print("Classes:", model["label_encoder"].classes_)
-    print("Model type:", model["model_type"])
     print("Number of dimensions:", model["num_dimensions"])
-    print("Number of unique features:", model["unique_features"])
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -181,17 +164,20 @@ def parse_args():
                               type=float,
                               required=True)
 
-    train_parser.add_argument("--random-feature-sampling-prob",
+    train_parser.add_argument("--feature-sampling-prob",
                               type=float)
+
+    train_parser.add_argument("--feature-scaling",
+                              type=str,
+                              default=None,
+                              choices=["binary",
+                                       "log1p",
+                                       "sqrt"])
 
     train_parser.add_argument("--n-partitions",
                               type=int,
                               required=True)
 
-    train_parser.add_argument("--n-cores",
-                              type=int,
-                              required=True)
-    
     train_parser.add_argument("--data-description-fl",
                               type=str,
                               required=True)
@@ -199,18 +185,16 @@ def parse_args():
     train_parser.add_argument("--workdir",
                               type=str,
                               required=True)
-                              
-    train_parser.add_argument("--model-output-fl",
-                              type=str)
 
-    train_parser.add_argument("--model-type",
+    train_parser.add_argument("--sampling-threshold",
+                              type=float)
+
+    train_parser.add_argument("--sampling-method",
                               type=str,
-                              default="lr",
-                              choices=["lr",
-                                       "knn",
-                                       "svm",
-                                       "rf"])
-    
+                              choices=["random",
+                                       "hash-threshold"],
+                              default="hash-threshold")
+                              
     inspect_parser = subparsers.add_parser("inspect-model")
     
     inspect_parser.add_argument("--model-fl",
@@ -231,48 +215,36 @@ def parse_args():
                               type=str,
                               required=True)
                               
-    apply_parser.add_argument("--predictions-output-fl",
-                              type=str,
-                              required=True)
-
-    apply_parser.add_argument("--n-cores",
-                              type=int,
-                              required=True)
-
     return parser.parse_args()
 
 if __name__ == "__main__":
     args = parse_args()
 
     if args.mode == "train":
+        sampling_params = ""
+        if args.sampling_threshold:
+            sampling_params = "--sampling-threshold {} --sampling-method {}".format(args.sampling_threshold, args.sampling_method)
+        
         config = { "n_features" : args.num_dimensions,
                    "sig_threshold" : args.sig_threshold,
                    "n_partitions" : args.n_partitions,
                    "output_sig_kmers" : True,
-                   "model_type" : args.model_type,
-                   "random_feature_sampling_prob" : args.random_feature_sampling_prob }
+                   "feature_sampling_prob" : args.feature_sampling_prob,
+                   "feature_scaling" : args.feature_scaling,
+                   "sampling_params" : sampling_params }
                    
-        success = train_model(args.data_description_fl,
-                              args.workdir,
-                              args.n_cores,
-                              config,
-                              model_output_fl=args.model_output_fl)
+        train_model(args.data_description_fl,
+                    args.workdir,
+                    config)
 
-        if not success:
-            sys.exit(1)
-            
     elif args.mode == "inspect-model":
         print_model_details(args.model_fl)
 
     elif args.mode == "apply-model":
-        success = apply_model(args.data_paths_fl,
-                              args.workdir,
-                              args.model_fl,
-                              args.n_cores,
-                              args.predictions_output_fl)
+        apply_model(args.data_paths_fl,
+                    args.workdir,
+                    args.model_fl)
 
-        if not success:
-            sys.exit(1)
     else:
         raise Exception("Unknown command '{}'".format(args.mdoe))
             

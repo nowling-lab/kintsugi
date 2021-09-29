@@ -23,19 +23,25 @@ import numpy as np
 
 from trashcompactor._base import TerminalConsumer
 from trashcompactor.inputs import KmerCountStreamer
-from trashcompactor.accumulators import MatrixAccumulator
-from trashcompactor.transformers.feature_indexing import DictionaryFeatureIndexer
-from trashcompactor.transformers.feature_scaling import CountScaler
-from trashcompactor.transformers.sample_indexing import DictionarySampleIndexerTrainer
+from trashcompactor.transformers.feature_filters import ObservedFeatureFilter
+from trashcompactor.outputs import KmerCountOutput
+
+def read_training_vocab(flname):
+    training_vocab = set()
+    with open(flname) as fl:
+        for ln in fl:
+            training_vocab.add(ln.strip())
+
+    return training_vocab
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--kmer-counts-fl",
+    parser.add_argument("--input-kmer-counts-fl",
                         type=str,
                         required=True)
 
-    parser.add_argument("--predictions-fl",
+    parser.add_argument("--output-kmer-counts-fl",
                         type=str,
                         required=True)
 
@@ -43,7 +49,7 @@ def parse_args():
                         type=str,
                         required=True)
 
-    parser.add_argument("--model-fl",
+    parser.add_argument("--training-vocab-fl",
                         type=str,
                         required=True)
 
@@ -53,29 +59,17 @@ if __name__ == "__main__":
     logging.basicConfig(level=0)
     args = parse_args()
 
-    model = joblib.load(args.model_fl)
+    training_vocab = read_training_vocab(args.training_vocab_fl)
 
-    stream = KmerCountStreamer(args.kmer_counts_fl,
+    stream = KmerCountStreamer(args.input_kmer_counts_fl,
                                gzipped=True,
                                sample_names=(args.sample_name,))
-    if model["scaling"] != None:
-        stream = CountScaler(stream, model["scaling"])
-    stream = DictionarySampleIndexerTrainer(stream)
-    stream = DictionaryFeatureIndexer(stream, model["feature_indices"])
-    accumulator = MatrixAccumulator(stream, model["num_dimensions"])
-    consumer = TerminalConsumer(accumulator)
+    stream = ObservedFeatureFilter(stream, training_vocab)
+    # Don't write the header because the merge script
+    # will add the header
+    stream = KmerCountOutput(stream,
+                             args.output_kmer_counts_fl,
+                             write_header=False)
+    consumer = TerminalConsumer(stream)
 
     consumer.run()
-
-    feature_matrix = accumulator.create_feature_matrix()
-    sample_names = accumulator.get_sample_names()
-
-    feature_matrix = model["scaler"].transform(feature_matrix)
-
-    pred_labels = model["model"].predict(feature_matrix)
-
-    text_labels = model["label_encoder"].inverse_transform(pred_labels)
-
-    with open(args.predictions_fl, "w") as fl:
-        for name, label in zip(sample_names, text_labels):
-            fl.write("{}\t{}\n".format(name, label))

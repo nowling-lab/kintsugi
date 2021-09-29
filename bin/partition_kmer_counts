@@ -19,6 +19,7 @@ limitations under the License.
 import argparse
 import gzip
 import os
+import random
 import sys
 
 import mmh3
@@ -37,6 +38,15 @@ def parse_args():
     parser.add_argument("--sample-name",
                         type=str,
                         required=True)
+
+    parser.add_argument("--sampling-threshold",
+                        type=float)
+
+    parser.add_argument("--sampling-method",
+                        type=str,
+                        choices=["random",
+                                 "hash-threshold"],
+                        default="hash-threshold")
 
     return parser.parse_args()
 
@@ -61,9 +71,26 @@ if __name__ == "__main__":
     for i, ln in enumerate(sys.stdin, start=1):
         cols = ln.strip().split()
         kmer = cols[0]
-        partition_idx = abs(mmh3.hash(kmer)) % args.n_partitions
-        fl = output_files[partition_idx]
-        fl.write(ln)
+        # hash is 32 bits signed
+        # after abs, 31 bits unsigned
+        hash_ = abs(mmh3.hash(kmer))
+        partition_idx = hash_ % args.n_partitions
+
+        keep = True
+        if args.sampling_threshold:
+            keep = True
+            if args.sampling_method == "random":
+                if random.random() < args.sampling_threshold:
+                    keep = True
+            elif args.sampling_method == "hash-threshold":
+                # largest unsigned 32-bit int
+                threshold = int(2147483648. * args.sampling_threshold)
+                if hash_ <= threshold:
+                    keep = True
+
+        if keep:
+            fl = output_files[partition_idx]
+            fl.write(ln)
 
         if(i == next_output):
             print("Processed {} k-mers".format(i))

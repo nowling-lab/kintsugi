@@ -33,13 +33,14 @@ setup(name="kintsugi",
       scripts=[
           "bin/evaluate_predictions",
           "bin/extract_features",
-          "bin/merge_features",
           "bin/merge_kmer_count_partitions",
           "bin/partition_kmer_counts",
           "bin/predict_inversion_genotypes",
           "bin/simulate_kmer_data",
           "bin/split_data_set",
-          "bin/train_genotype_classifier",
-          "bin/kintsugi_cli"
+          "bin/kintsugi_cli",
+          "bin/train_on_significant",
+          "bin/filter_target_kmers",
+          "bin/kmer_association_testing"
       ]
 )
