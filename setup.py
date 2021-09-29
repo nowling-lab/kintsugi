@@ -25,14 +25,13 @@ setup(name="kintsugi",
       license="Apache License, Version 2.0",
       zip_safe=False,
       python_requires=">=3.6",
-      install_requires=["numpy>=0.19.1", "scipy>=0.19.1", "sklearn", "mmh3", "trashcompactor", "snakemake", "pyyaml"],
+      install_requires=["numpy>=0.19.1", "scipy>=0.19.1", "sklearn", "mmh3", "trashcompactor", "snakemake", "pyyaml", "lz4"],
       packages=find_packages(include=["kintsugi", "kintsugi.*"]),
       package_data={
           "kintsugi" : ["snakefiles/*.smk"]
       },
       scripts=[
           "bin/evaluate_predictions",
-          "bin/extract_features",
           "bin/merge_kmer_count_partitions",
           "bin/partition_kmer_counts",
           "bin/predict_inversion_genotypes",
