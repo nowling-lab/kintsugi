@@ -39,7 +39,6 @@ setup(name="kintsugi",
           "bin/split_data_set",
           "bin/kintsugi_cli",
           "bin/train_on_significant",
-          "bin/filter_target_kmers",
           "bin/kmer_association_testing"
       ]
 )
