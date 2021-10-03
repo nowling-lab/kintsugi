@@ -73,9 +73,11 @@ def parse_args():
                         type=str,
                         required=True)
 
-    parser.add_argument("--feature-sample-prob",
-                        type=float)
-
+    # Note that features are scaled in the
+    # kmer association testing script. We
+    # need the scaling information here to
+    # store in the model description.
+    
     parser.add_argument("--scaling",
                         type=str,
                         default=None,
@@ -95,14 +97,10 @@ if __name__ == "__main__":
     input_streams = []
     for infl in args.kmer_count_fls:
         stream = KmerCountStreamer(infl,
-                                   gzipped=True)
+                                   compression="lz4")
         input_streams.append(stream)
 
     stream = AppendStreams(input_streams)
-
-    if args.feature_sample_prob:
-        stream = RandomFeatureFilter(stream,
-                                     args.feature_sample_prob)
 
     sample_indexer = DictionarySampleIndexer(stream,
                                              sample_indices)

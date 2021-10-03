@@ -18,11 +18,11 @@ limitations under the License.
 
 import argparse
 import glob
-import gzip
+import lz4.frame
 import os
 
 def GzipStream(flname):
-    with gzip.open(flname, "rt") as fl:
+    with lz4.frame.open(flname, "rt") as fl:
         for ln in fl:
             cols = ln.split()
             # kmer, count

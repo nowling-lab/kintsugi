@@ -17,7 +17,7 @@ limitations under the License.
 """
 
 import argparse
-import gzip
+import lz4.frame
 import os
 import random
 import sys
@@ -62,8 +62,8 @@ if __name__ == "__main__":
             os.makedirs(part_path)
         
         file_path = os.path.join(part_path,
-                                 "{}.tsv.gz".format(args.sample_name))
-        fl = gzip.open(file_path, mode="wt")
+                                 "{}.tsv.lz4".format(args.sample_name))
+        fl = lz4.frame.open(file_path, mode="wt")
         fl.write("kmer\t{}\n".format(args.sample_name))
         output_files.append(fl)
 
@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
         keep = True
         if args.sampling_threshold:
-            keep = True
+            keep = False
             if args.sampling_method == "random":
                 if random.random() < args.sampling_threshold:
                     keep = True

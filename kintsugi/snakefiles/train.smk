@@ -17,7 +17,7 @@ rule partition_kmer_counts:
         n_partitions = config["n_partitions"],
         sampling_params = config["sampling_params"]
     output:
-        ["data/partitioned_kmer_counts/partition_%s/{sample_name}.tsv.gz" % part_num for part_num in range(config["n_partitions"])]
+        ["data/partitioned_kmer_counts/partition_%s/{sample_name}.tsv.lz4" % part_num for part_num in range(config["n_partitions"])]
     threads:
         1
     shell:
@@ -25,23 +25,23 @@ rule partition_kmer_counts:
 
 rule merge_partitions:
     input:
-        ["data/partitioned_kmer_counts/partition_{part_num}/%s.tsv.gz" % sample_name for sample_name in config["sample_data_paths"].keys()]
+        ["data/partitioned_kmer_counts/partition_{part_num}/%s.tsv.lz4" % sample_name for sample_name in config["sample_data_paths"].keys()]
     output:
-        "data/merged_kmer_counts/partition_{part_num}.gz"
+        "data/merged_kmer_counts/partition_{part_num}.lz4"
     threads:
         1
     shell:
-        "merge_kmer_count_partitions --partition-dir data/partitioned_kmer_counts/partition_{wildcards.part_num} | gzip -c > {output}"
+        "merge_kmer_count_partitions --partition-dir data/partitioned_kmer_counts/partition_{wildcards.part_num} | lz4 -c > {output}"
 
 rule select_features:
     input:
-        "data/merged_kmer_counts/partition_{part_num}.gz"
+        "data/merged_kmer_counts/partition_{part_num}.lz4"
     params:
         labels_fl=config["labels_fl"],
         threshold=config["sig_threshold"],
         feature_scaling=lambda w: "--feature-scaling {}".format(config["feature_scaling"]) if config["feature_scaling"] else ""
     output:
-        "data/significant_kmer_counts/sig_kmers_partition_{part_num}.gz"
+        "data/significant_kmer_counts/sig_kmers_partition_{part_num}.lz4"
     threads:
         1
     shell:
@@ -49,18 +49,17 @@ rule select_features:
 
 rule train_genotype_classifier:
     input:
-        sig_kmers=["data/significant_kmer_counts/sig_kmers_partition_{}.gz".format(i) for i in range(config["n_partitions"])],
+        sig_kmers=["data/significant_kmer_counts/sig_kmers_partition_{}.lz4".format(i) for i in range(config["n_partitions"])],
         labels_fl=lambda w: config["labels_fl"]
     params:
         feature_scaling=lambda w: "--scaling {}".format(config["feature_scaling"]) if config["feature_scaling"] else "",
-        n_features=config["n_features"],
-        feature_sample_prob=lambda w: "--feature-sample-prob {}".format(config["feature_sampling_prob"]) if config["feature_sampling_prob"] else ""
+        n_features=config["n_features"]
     output:
         "data/model.pkl"
     threads:
         1
     shell:
-        "train_on_significant --kmer-count-fls {input.sig_kmers} --labels-fl {input.labels_fl} --num-dimensions {params.n_features} --model-output-fl {output} {params.feature_scaling} {params.feature_sample_prob}"
+        "train_on_significant --kmer-count-fls {input.sig_kmers} --labels-fl {input.labels_fl} --num-dimensions {params.n_features} --model-output-fl {output} {params.feature_scaling}"
         
 rule run_experiments:
     input:
