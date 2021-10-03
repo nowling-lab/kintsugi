@@ -56,7 +56,7 @@ if __name__ == "__main__":
     model = joblib.load(args.model_fl)
 
     stream = KmerCountStreamer(args.kmer_counts_fl,
-                               gzipped=True,
+                               compression="gzip",
                                sample_names=(args.sample_name,))
     if model["scaling"] != None:
         stream = CountScaler(stream, model["scaling"])

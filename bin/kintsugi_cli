@@ -164,9 +164,6 @@ def parse_args():
                               type=float,
                               required=True)
 
-    train_parser.add_argument("--feature-sampling-prob",
-                              type=float)
-
     train_parser.add_argument("--feature-scaling",
                               type=str,
                               default=None,
@@ -229,7 +226,6 @@ if __name__ == "__main__":
                    "sig_threshold" : args.sig_threshold,
                    "n_partitions" : args.n_partitions,
                    "output_sig_kmers" : True,
-                   "feature_sampling_prob" : args.feature_sampling_prob,
                    "feature_scaling" : args.feature_scaling,
                    "sampling_params" : sampling_params }
                    

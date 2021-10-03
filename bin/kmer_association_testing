@@ -80,7 +80,7 @@ if __name__ == "__main__":
     labels = read_labels(args.labels_fl)
 
     stream = KmerCountStreamer(args.kmer_count_fl,
-                               gzipped=True)
+                               compression="lz4")
 
     if args.feature_scaling:
         stream = CountScaler(stream,
@@ -90,10 +90,9 @@ if __name__ == "__main__":
                                       labels,
                                       args.sig_threshold)
 
-    gzipped = args.sig_kmer_output_fl.endswith(".gz")
     stream = KmerCountOutput(stream,
                              args.sig_kmer_output_fl,
-                             gzipped=gzipped)
+                             compression="lz4")
 
     consumer = TerminalConsumer(stream)
 
